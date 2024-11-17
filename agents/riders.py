@@ -19,10 +19,16 @@ class Rider(Agent):
         self.bag = []
         self.goal_position = None
 
-    def add_order_to_queue(self, order):
+    def add_order_to_queue(self, order, t):
         self.queue.append(order)
         self.state = RiderStatus.RIDER_GOING_TO_VENDOR
         self.goal_position = order.restaurant_address
+        order.rider_assign(t)
+
+    def remove_order_from_queue(self, order):
+        self.queue.remove(order)
+        # if len(self.queue) == 0:
+        #     self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
 
     def add_order_to_bag(self, order):
         self.bag.append(order)
@@ -50,10 +56,21 @@ class Rider(Agent):
             actual_position = (x, y - 1)
 
         self.model.grid.move_agent(agent=self, pos=actual_position)
+        print("x")
 
     def step(self):
         if self.goal_position is None:
             return
 
-        if self.pos != self.goal_position:
+        if self.pos == self.goal_position:
+            if self.state == RiderStatus.RIDER_GOING_TO_VENDOR:
+                order = self.queue[0]  # TODO attention when stacking
+                self.add_order_to_bag(order)
+                self.remove_order_from_queue(order)
+
+            elif self.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
+                order = self.bag[0]  # TODO attention when stacking
+                self.remove_order_from_bag(order)
+
+        elif self.pos != self.goal_position:
             self.move()

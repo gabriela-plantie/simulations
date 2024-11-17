@@ -16,15 +16,15 @@ class Order:
         preparation_time: int,
         restaurant_address: int,
         customer_address: int,
-        # assigned_at:int=None,
-        # pick_up_at:int=None,
-        # dropp_off_at:int=None,
     ):
         self.id = id
         self.creation_at = creation_at
         self.preparation_time = preparation_time
         self.restaurant_address = restaurant_address
         self.customer_address = customer_address
+        self.assigned_at = None
+        self.rider_pick_up = None
+        self.drop_off_at = None
 
     def rider_assign(self, assigned_at):
         self.assigned_at = assigned_at
