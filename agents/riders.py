@@ -30,17 +30,19 @@ class Rider(Agent):
         # if len(self.queue) == 0:
         #     self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
 
-    def add_order_to_bag(self, order):
+    def add_order_to_bag(self, order, t):
         self.bag.append(order)
         self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
         self.goal_position = order.customer_address
+        order.rider_pick_up(t)
 
-    def remove_order_from_bag(self, order):
+    def remove_order_from_bag(self, order, t):
         self.bag.remove(order)
         if len(self.bag) == 0:
             self.state = RiderStatus.RIDER_FREE
             # FOR NOW I assume they stay at the customer place
             # until new order is assigned
+        order.rider_drop_off(t)
 
     def move(self):
         x, y = self.pos
@@ -65,12 +67,12 @@ class Rider(Agent):
         if self.pos == self.goal_position:
             if self.state == RiderStatus.RIDER_GOING_TO_VENDOR:
                 order = self.queue[0]  # TODO attention when stacking
-                self.add_order_to_bag(order)
+                self.add_order_to_bag(order, self.model.t)
                 self.remove_order_from_queue(order)
 
             elif self.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
                 order = self.bag[0]  # TODO attention when stacking
-                self.remove_order_from_bag(order)
+                self.remove_order_from_bag(order, self.model.t)
 
         elif self.pos != self.goal_position:
             self.move()

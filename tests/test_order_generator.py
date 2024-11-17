@@ -67,3 +67,37 @@ def test_states():
     while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
         dispatcher.step()
     assert len(dispatcher.riders[0].bag) == 0
+
+
+def test_orders_states():
+    np.random.seed(19)
+    num_riders = 1
+    num_orders = 1
+    times = 10
+    dispatcher = Dispatcher(
+        dim=5,
+        num_orders=num_orders,
+        times=times,
+        num_riders=num_riders,
+    )
+    assert all([o.assigned_at is None for orders in dispatcher.orders for o in orders])
+    assert all([o.pick_up_at is None for orders in dispatcher.orders for o in orders])
+    assert all([o.drop_off_at is None for orders in dispatcher.orders for o in orders])
+
+    dispatcher.step()
+    assert set([o.assigned_at for orders in dispatcher.orders for o in orders]) == {
+        0,
+        None,
+    }
+
+    while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR:
+        dispatcher.step()
+    assert any(
+        [o.pick_up_at is not None for orders in dispatcher.orders for o in orders]
+    )
+
+    while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
+        dispatcher.step()
+    assert any(
+        [o.drop_off_at is not None for orders in dispatcher.orders for o in orders]
+    )

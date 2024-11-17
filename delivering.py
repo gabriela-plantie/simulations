@@ -16,32 +16,44 @@ class Dispatcher(Model):
         self.schedule = time.RandomActivation(self)
         self.orders = OrderGenerator(num_orders).create_orders(times)
         self.riders = RiderGenerator(model=self, num_riders=num_riders).create_riders()
+        self.orders_to_assign = []
 
         for rider in self.riders:
             self.grid.place_agent(rider, (2, 2))
 
     def step(self):
 
-        if self.t == 0:
-            self.orders_to_assign = []
+        self.get_orders_to_assign()
 
-        # filter orders by creation time
-        if self.t < len(self.orders):
-            new_orders_at_t = self.orders[self.t]
+        # assign order to rider (TODO filter by distance)
+        self.assign_orders()
 
+        self.agents.do("step")
+        self.datacollector.collect(self)
+        self.schedule.step()
+
+        self.t += 1
+        if self.t > len(self.orders):
+            return
+
+    def get_orders_to_assign(self):
         # filter orders in state assigned from orders to assign
-        orders_assigned = [
-            o for ord in self.orders for o in ord if o.assigned_at is not None
-        ]
-        for o in orders_assigned:
+        for o in self.get_orders_assigned():  # move to rider.add_order_to_queue
             if o in self.orders_to_assign:
                 self.orders_to_assign.remove(o)
 
         # add new list of orders to "orders to assign" only if self.t <
         if self.t < len(self.orders):
-            self.orders_to_assign.extend(new_orders_at_t)
+            self.orders_to_assign.extend(self.get_new_orders_at_t())
 
-        # assign order to rider (TODO filter by distance)
+    def get_orders_assigned(self):
+        return [o for ord in self.orders for o in ord if o.assigned_at is not None]
+
+    def get_new_orders_at_t(self):
+        new_orders_at_t = self.orders[self.t]
+        return new_orders_at_t
+
+    def assign_orders(self):
         free_riders = list(
             self.agents.select(lambda a: a.state == RiderStatus.RIDER_FREE)
         )
@@ -53,11 +65,3 @@ class Dispatcher(Model):
         num_orders_to_assing = min(len(free_riders), len(self.orders_to_assign))
         for i in range(num_orders_to_assing):
             free_riders[i].add_order_to_queue(self.orders_to_assign[i], self.t)
-
-        self.agents.do("step")
-        self.datacollector.collect(self)
-        self.schedule.step()
-
-        self.t += 1
-        if self.t > len(self.orders):
-            return

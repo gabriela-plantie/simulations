@@ -23,14 +23,14 @@ class Order:
         self.restaurant_address = restaurant_address
         self.customer_address = customer_address
         self.assigned_at = None
-        self.rider_pick_up = None
+        self.pick_up_at = None
         self.drop_off_at = None
 
     def rider_assign(self, assigned_at):
         self.assigned_at = assigned_at
 
     def rider_pick_up(self, pick_up_at):
-        self.rider_pick_up = pick_up_at
+        self.pick_up_at = pick_up_at
 
     def rider_drop_off(self, drop_off_at):
         self.drop_off_at = drop_off_at
