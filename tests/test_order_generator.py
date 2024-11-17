@@ -1,7 +1,8 @@
 import numpy as np
 
 from agents.riders import RiderStatus
-from delivering import Dispatcher, OrderGenerator
+from delivering import Dispatcher
+from utils import OrderGenerator
 
 
 def test_create_orders():
