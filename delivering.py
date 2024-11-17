@@ -18,14 +18,8 @@ class Dispatcher(Model):
         self.riders = RiderGenerator(model=self, num_riders=num_riders).create_riders()
         self.orders_to_assign = []
 
-        for rider in self.riders:
-            self.grid.place_agent(rider, (2, 2))
-
     def step(self):
-
         self.get_orders_to_assign()
-
-        # assign order to rider (TODO filter by distance)
         self.assign_orders()
 
         self.agents.do("step")
@@ -47,13 +41,13 @@ class Dispatcher(Model):
             self.orders_to_assign.extend(self.get_new_orders_at_t())
 
     def get_orders_assigned(self):
-        return [o for ord in self.orders for o in ord if o.assigned_at is not None]
+        return [o for o in self.orders if o.assigned_at is not None]
 
     def get_new_orders_at_t(self):
-        new_orders_at_t = self.orders[self.t]
-        return new_orders_at_t
+        return [o for o in self.orders if o.creation_at == self.t]
 
     def assign_orders(self):
+        # TODO filter by distance
         free_riders = list(
             self.agents.select(lambda a: a.state == RiderStatus.RIDER_FREE)
         )

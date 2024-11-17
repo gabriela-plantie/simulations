@@ -10,7 +10,7 @@ class RiderGenerator:
         self.num_riders = num_riders
 
     def create_riders(self):
-        return [
+        riders = [
             Rider(
                 model=self.model,
                 unique_id=r,
@@ -20,6 +20,11 @@ class RiderGenerator:
             )
             for r in range(self.num_riders)
         ]
+
+        for rider in riders:
+            self.model.grid.place_agent(rider, (2, 2))
+
+        return riders
 
 
 class OrderGenerator:
@@ -56,4 +61,4 @@ class OrderGenerator:
             ]
             orders.append(orders_in_t)
             previous_tot = previous_tot + len(orders_in_t)
-        return orders
+        return [o for ord in orders for o in ord]

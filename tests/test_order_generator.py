@@ -10,9 +10,9 @@ def test_create_orders():
     orders_per_tb = 10
     order_generator = OrderGenerator(orders_per_tb)
     orders = order_generator.create_orders(times)
-    assert len(orders) == times
-    assert [len(os) for os in orders] == [orders_per_tb] * times
-    assert [o.id for os in orders for o in os] == list(
+    assert max([o.creation_at for o in orders]) == times - 1
+    assert len(orders) == orders_per_tb * times
+    assert [o.id for o in orders] == list(
         range(times * orders_per_tb)
     ), "ids incorrectly created"
 
@@ -80,24 +80,20 @@ def test_orders_states():
         times=times,
         num_riders=num_riders,
     )
-    assert all([o.assigned_at is None for orders in dispatcher.orders for o in orders])
-    assert all([o.pick_up_at is None for orders in dispatcher.orders for o in orders])
-    assert all([o.drop_off_at is None for orders in dispatcher.orders for o in orders])
+    assert all([o.assigned_at is None for o in dispatcher.orders])
+    assert all([o.pick_up_at is None for o in dispatcher.orders])
+    assert all([o.drop_off_at is None for o in dispatcher.orders])
 
     dispatcher.step()
-    assert set([o.assigned_at for orders in dispatcher.orders for o in orders]) == {
+    assert set([o.assigned_at for o in dispatcher.orders]) == {
         0,
         None,
     }
 
     while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR:
         dispatcher.step()
-    assert any(
-        [o.pick_up_at is not None for orders in dispatcher.orders for o in orders]
-    )
+    assert any([o.pick_up_at is not None for o in dispatcher.orders])
 
     while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
         dispatcher.step()
-    assert any(
-        [o.drop_off_at is not None for orders in dispatcher.orders for o in orders]
-    )
+    assert any([o.drop_off_at is not None for o in dispatcher.orders])

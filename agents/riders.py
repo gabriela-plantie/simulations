@@ -27,8 +27,6 @@ class Rider(Agent):
 
     def remove_order_from_queue(self, order):
         self.queue.remove(order)
-        # if len(self.queue) == 0:
-        #     self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
 
     def add_order_to_bag(self, order, t):
         self.bag.append(order)
