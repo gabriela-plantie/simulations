@@ -1,11 +1,11 @@
 from mesa import DataCollector, Model, space, time
 
 from agents.riders import RiderStatus
-from utils import OrderGenerator, RiderGenerator
+from utils import RiderGenerator
 
 
 class Dispatcher(Model):
-    def __init__(self, dim, num_orders, times, num_riders):
+    def __init__(self, dim, orders, num_riders):
         super().__init__()
         self.datacollector = DataCollector(
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
@@ -14,7 +14,7 @@ class Dispatcher(Model):
         self.t: int = 0
         self.grid = space.MultiGrid(width=dim, height=dim, torus=True)
         self.schedule = time.RandomActivation(self)
-        self.orders = OrderGenerator(num_orders).create_orders(times)
+        self.orders = orders
         self.riders = RiderGenerator(model=self, num_riders=num_riders).create_riders()
         self.orders_to_assign = []
 

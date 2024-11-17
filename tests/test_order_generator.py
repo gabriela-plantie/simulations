@@ -8,8 +8,7 @@ from utils import OrderGenerator
 def test_create_orders():
     times = 100
     orders_per_tb = 10
-    order_generator = OrderGenerator(orders_per_tb)
-    orders = order_generator.create_orders(times)
+    orders = OrderGenerator(orders_per_tb).create_orders(times)
     assert max([o.creation_at for o in orders]) == times - 1
     assert len(orders) == orders_per_tb * times
     assert [o.id for o in orders] == list(
@@ -19,24 +18,24 @@ def test_create_orders():
 
 def test_dispatcher():
     num_riders = 20
-    num_orders = 5
+    orders_per_tb = 5
     times = 5
+    orders = OrderGenerator(orders_per_tb).create_orders(times)
     dispatcher = Dispatcher(
         dim=5,
-        num_orders=num_orders,
-        times=times,
+        orders=orders,
         num_riders=num_riders,
     )
     assert len(dispatcher.riders) == num_riders
     dispatcher.step()
-    assert set([r.state for r in dispatcher.riders][:num_orders]) == set(
+    assert set([r.state for r in dispatcher.riders][:orders_per_tb]) == set(
         [RiderStatus.RIDER_GOING_TO_VENDOR]
     )
-    assert set([r.state for r in dispatcher.riders][num_orders:]) == set(
+    assert set([r.state for r in dispatcher.riders][orders_per_tb:]) == set(
         [RiderStatus.RIDER_FREE]
     )
     dispatcher.step()
-    assert set([r.state for r in dispatcher.riders][num_orders:]).issuperset(
+    assert set([r.state for r in dispatcher.riders][orders_per_tb:]).issuperset(
         set([RiderStatus.RIDER_FREE, RiderStatus.RIDER_GOING_TO_VENDOR])
     )
 
@@ -46,10 +45,10 @@ def test_states():
     num_riders = 2
     num_orders = 2
     times = 10
+    orders = OrderGenerator(num_orders).create_orders(times)
     dispatcher = Dispatcher(
         dim=5,
-        num_orders=num_orders,
-        times=times,
+        orders=orders,
         num_riders=num_riders,
     )
     assert dispatcher.riders[0].queue == []
@@ -69,15 +68,16 @@ def test_states():
     assert len(dispatcher.riders[0].bag) == 0
 
 
-def test_orders_states():
+def test_orders_times_steps():
     np.random.seed(19)
     num_riders = 1
     num_orders = 1
     times = 10
+
+    orders = OrderGenerator(num_orders).create_orders(times)
     dispatcher = Dispatcher(
         dim=5,
-        num_orders=num_orders,
-        times=times,
+        orders=orders,
         num_riders=num_riders,
     )
     assert all([o.assigned_at is None for o in dispatcher.orders])
