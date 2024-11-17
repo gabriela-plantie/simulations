@@ -1,5 +1,6 @@
 import numpy as np
 
+from agents.orders import Order
 from agents.riders import RiderStatus
 from delivering import Dispatcher
 from utils import OrderGenerator
@@ -97,3 +98,35 @@ def test_orders_times_steps():
     while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
         dispatcher.step()
     assert any([o.drop_off_at is not None for o in dispatcher.orders])
+
+
+# stacking test
+# creo 2 ordenes en t=0 en el mismo restaurant
+# asigno las dos al mismo rider
+
+# creo 2 ordenes en el mismo restaurant en t=1 y t=3
+# neesito agregar un parametro de cuanto tiempo puede esperar en el restaurant
+# las asigno a diferentes riders
+
+
+def test_stacking():
+    restaurant_address = (2, 4)
+    num_riders = 2
+    orders = [
+        Order(
+            id=i,
+            creation_at=0,
+            restaurant_address=restaurant_address,
+            customer_address=cust_address,
+        )
+        for i, cust_address in enumerate([(2, 3), (3, 4)])
+    ]
+    dispatcher = Dispatcher(
+        dim=5,
+        orders=orders,
+        num_riders=num_riders,
+    )
+    dispatcher.step()
+    assert len(dispatcher.riders[0].queue) == 2
+
+    # TODO add q en un momento tiene los dos en la bag
