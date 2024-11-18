@@ -3,9 +3,9 @@ class Order:
         self,
         id: int,
         creation_at: int,
-        preparation_time: int,
         restaurant_address: int,
         customer_address: int,
+        preparation_time: int = 0,
     ):
         self.id = id
         self.creation_at = creation_at

@@ -1,20 +1,22 @@
 from mesa import DataCollector, Model, space, time
 
 from agents.riders import RiderStatus
-from utils import OrderGenerator, RiderGenerator
+from utils import RiderGenerator
 
 
 class Dispatcher(Model):
-    def __init__(self, dim, num_orders, times, num_riders):
+    def __init__(self, dim, orders, num_riders, max_t, bag_limit):
         super().__init__()
         self.datacollector = DataCollector(
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
             agent_reporters={"State": "state"}
         )
+        self.bag_limit = bag_limit
+        self.max_t = max_t
         self.t: int = 0
         self.grid = space.MultiGrid(width=dim, height=dim, torus=True)
         self.schedule = time.RandomActivation(self)
-        self.orders = OrderGenerator(num_orders).create_orders(times)
+        self.orders = orders
         self.riders = RiderGenerator(model=self, num_riders=num_riders).create_riders()
         self.orders_to_assign = []
 
@@ -27,7 +29,8 @@ class Dispatcher(Model):
         self.schedule.step()
 
         self.t += 1
-        if self.t > len(self.orders):
+        if self.t > self.max_t:  # FIXME: t should
+            print("Max simulation steps reached!")
             return
 
     def get_orders_to_assign(self):
@@ -37,8 +40,7 @@ class Dispatcher(Model):
                 self.orders_to_assign.remove(o)
 
         # add new list of orders to "orders to assign" only if self.t <
-        if self.t < len(self.orders):
-            self.orders_to_assign.extend(self.get_new_orders_at_t())
+        self.orders_to_assign.extend(self.get_new_orders_at_t())
 
     def get_orders_assigned(self):
         return [o for o in self.orders if o.assigned_at is not None]
@@ -46,16 +48,53 @@ class Dispatcher(Model):
     def get_new_orders_at_t(self):
         return [o for o in self.orders if o.creation_at == self.t]
 
-    def assign_orders(self):
-        # TODO filter by distance
-        free_riders = list(
-            self.agents.select(lambda a: a.state == RiderStatus.RIDER_FREE)
+    def get_available_riders(self):
+        """
+        Get available riders:
+            - riders that are free or
+            - riders that are going to the vendor and have space in the queue
+        """
+        return list(
+            self.agents.select(
+                lambda a: (
+                    (a.state == RiderStatus.RIDER_FREE)
+                    or (
+                        (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
+                        and (len(a._queue) + len(a._bag) < self.bag_limit)
+                    )
+                )
+            )
         )
-        # free_riders = [r for r in self.riders if r.state
-        # == RiderStatus.RIDER_FREE]
 
+    def assign_orders(self):
+        available_riders = self.get_available_riders()
+        # For now, we will allow stacking only at the vendor
         # assign orders to rider
-        # TODO add the case that I have orders from previous TB
-        num_orders_to_assing = min(len(free_riders), len(self.orders_to_assign))
-        for i in range(num_orders_to_assing):
-            free_riders[i].add_order_to_queue(self.orders_to_assign[i], self.t)
+        for order in self.orders_to_assign[:]:
+
+            # first tries to add the order
+            # to a rider that is already going to the vendor
+            for rider in available_riders:
+                if (
+                    (rider.state == RiderStatus.RIDER_GOING_TO_VENDOR)
+                    and (len(rider._queue) + len(rider._bag) < self.bag_limit)
+                    and (rider._goal_position == order.restaurant_address)
+                ):
+                    rider.add_order_to_queue(order=order, t=self.t)
+                    self.orders_to_assign.remove(order)
+
+                    if (
+                        len(rider._queue) + len(rider._bag) == self.bag_limit
+                    ):  # CHECK tiene sentido?
+                        available_riders.remove(rider)
+                    break
+
+            # if it cannot not then it adds it to the free riders
+            if order in self.orders_to_assign[:]:
+                for rider in list(
+                    self.agents.select(lambda a: a.state == RiderStatus.RIDER_FREE)
+                ):
+                    rider.add_order_to_queue(order, self.t)
+                    self.orders_to_assign.remove(order)
+                    print(f"remueve {order}")
+                    break

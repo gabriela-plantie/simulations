@@ -10,41 +10,53 @@ class RiderStatus(str, Enum):
 
 
 class Rider(Agent):
-    def __init__(self, unique_id, model, shift_start_at, shift_end_at, state):
+    def __init__(self, unique_id, model, shift_start_at, shift_end_at):
         super().__init__(model=model)
         self.shift_start_at = shift_start_at
         self.shift_end_at = shift_end_at
-        self.state = state
-        self.queue = []
-        self.bag = []
-        self.goal_position = None
+        self.state = RiderStatus.RIDER_FREE
+        self._queue = []
+        self._bag = []
+        self._goal_position = None
 
     def add_order_to_queue(self, order, t):
-        self.queue.append(order)
+        self._queue.append(order)
+        self._goal_position = order.restaurant_address
+        order.rider_assign(assigned_at=t)
         self.state = RiderStatus.RIDER_GOING_TO_VENDOR
-        self.goal_position = order.restaurant_address
-        order.rider_assign(t)
 
     def remove_order_from_queue(self, order):
-        self.queue.remove(order)
+        self._queue.remove(order)
 
     def add_order_to_bag(self, order, t):
-        self.bag.append(order)
-        self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
-        self.goal_position = order.customer_address
+        """
+        Add order to bag (picked up from vendor).
+        If bag was empty -> goal position is this order's customer position
+        Else -> goal_position remains (from previous order in bag)
+        """
+        if len(self._bag) == 0:
+            self._goal_position = order.customer_address
+        self._bag.append(order)
         order.rider_pick_up(t)
+        self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
 
     def remove_order_from_bag(self, order, t):
-        self.bag.remove(order)
-        if len(self.bag) == 0:
-            self.state = RiderStatus.RIDER_FREE
-            # FOR NOW I assume they stay at the customer place
-            # until new order is assigned
+        """
+        Remove order from bag when delivered.
+        Update goal position for rider:
+            - if bag still has orders -> customer address
+            - if bag empty -> remains
+        """
+        self._bag.remove(order)
+        if len(self._bag) > 0:
+            self._goal_position = self._bag[0].customer_address
         order.rider_drop_off(t)
+        if len(self._bag) == 0:
+            self.state = RiderStatus.RIDER_FREE
 
     def move(self):
         x, y = self.pos
-        x_goal, y_goal = self.goal_position
+        x_goal, y_goal = self._goal_position
 
         if x < x_goal:
             actual_position = (x + 1, y)
@@ -59,18 +71,18 @@ class Rider(Agent):
         print("x")
 
     def step(self):
-        if self.goal_position is None:
+        if self._goal_position is None:
             return
 
-        if self.pos == self.goal_position:
+        if self.pos == self._goal_position:
             if self.state == RiderStatus.RIDER_GOING_TO_VENDOR:
-                order = self.queue[0]  # TODO attention when stacking
-                self.add_order_to_bag(order, self.model.t)
-                self.remove_order_from_queue(order)
+                for order in self._queue:
+                    self.add_order_to_bag(order, self.model.t)
+                    self.remove_order_from_queue(order)
 
             elif self.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
-                order = self.bag[0]  # TODO attention when stacking
+                order = self._bag[0]
                 self.remove_order_from_bag(order, self.model.t)
 
-        elif self.pos != self.goal_position:
+        elif self.pos != self._goal_position:
             self.move()

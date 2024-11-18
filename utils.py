@@ -1,7 +1,7 @@
 import numpy as np
 
 from agents.orders import Order
-from agents.riders import Rider, RiderStatus
+from agents.riders import Rider
 
 
 class RiderGenerator:
@@ -16,7 +16,6 @@ class RiderGenerator:
                 unique_id=r,
                 shift_end_at=10,
                 shift_start_at=0,
-                state=RiderStatus.RIDER_FREE,
             )
             for r in range(self.num_riders)
         ]
