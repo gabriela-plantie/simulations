@@ -60,7 +60,7 @@ def test_states():
     )
     dispatcher.step()
     assert (
-        len(dispatcher.riders[0].queue) == 1
+        len(dispatcher.riders[0]._queue) == 1
     ), "the rider should have an order assigned"
     assert (
         dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR
@@ -70,16 +70,16 @@ def test_states():
     while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR:
         dispatcher.step()
     assert (
-        len(dispatcher.riders[0].queue) == 0
+        len(dispatcher.riders[0]._queue) == 0
     ), """When restarurant is reached
         and rider picking up from only one restaurant,
         queue should be empty"""  # TODO 2 asserts that go together
     assert (
-        len(dispatcher.riders[0].bag) >= 1
+        len(dispatcher.riders[0]._bag) >= 1
     ), "when restarurant is reached, bag should have the orders"
     while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
         dispatcher.step()
-    assert len(dispatcher.riders[0].bag) == 0
+    assert len(dispatcher.riders[0]._bag) == 0
 
 
 def test_orders_times_steps():
@@ -144,6 +144,6 @@ def test_stacking():
         num_riders=num_riders,
     )
     dispatcher.step()
-    assert len(dispatcher.riders[0].queue) == 2
+    assert len(dispatcher.riders[0]._queue) == 2
 
     # TODO add q en un momento tiene los dos en la bag

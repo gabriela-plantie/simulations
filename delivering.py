@@ -60,7 +60,7 @@ class Dispatcher(Model):
                     (a.state == RiderStatus.RIDER_FREE)
                     or (
                         (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                        and (len(a.queue) + len(a.bag) < self.bag_limit)
+                        and (len(a._queue) + len(a._bag) < self.bag_limit)
                     )
                 )
             )
@@ -77,14 +77,14 @@ class Dispatcher(Model):
             for rider in available_riders:
                 if (
                     (rider.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                    and (len(rider.queue) + len(rider.bag) < self.bag_limit)
-                    and (rider.goal_position == order.restaurant_address)
+                    and (len(rider._queue) + len(rider._bag) < self.bag_limit)
+                    and (rider._goal_position == order.restaurant_address)
                 ):
                     rider.add_order_to_queue(order=order, t=self.t)
                     self.orders_to_assign.remove(order)
 
                     if (
-                        len(rider.queue) + len(rider.bag) == self.bag_limit
+                        len(rider._queue) + len(rider._bag) == self.bag_limit
                     ):  # CHECK tiene sentido?
                         available_riders.remove(rider)
                     break
