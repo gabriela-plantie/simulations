@@ -9,7 +9,27 @@ class Dispatcher(Model):
         super().__init__()
         self.datacollector = DataCollector(
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
-            agent_reporters={"State": "state"}
+            # agent_reporters={"State": "state"}
+            {
+                "riders_free": lambda m: sum(
+                    [r.state == RiderStatus.RIDER_FREE for r in m.riders]
+                ),
+                "riders_going_to_vendor": lambda m: sum(
+                    [r.state == RiderStatus.RIDER_GOING_TO_VENDOR for r in m.riders]
+                ),
+                "riders_going_to_customer": lambda m: sum(
+                    [r.state == RiderStatus.RIDER_GOING_TO_CUSTOMER for r in m.riders]
+                ),
+                "orders_assigned": lambda m: sum(
+                    [o.assigned_at is not None for o in self.orders]
+                ),
+                "orders_picked_up": lambda m: sum(
+                    [o.pick_up_at is not None for o in self.orders]
+                ),
+                "orders_delivered": lambda m: sum(
+                    [o.drop_off_at is not None for o in self.orders]
+                ),
+            }
         )
         self.bag_limit = bag_limit
         self.max_t = max_t
