@@ -6,64 +6,77 @@ from delivering import Dispatcher
 from utils import OrderGenerator
 
 
-def test_create_orders():
-    times = 100
-    orders_per_tb = 10
-    orders = OrderGenerator(orders_per_tb).create_orders(times)
-    assert max([o.creation_at for o in orders]) == times - 1
-    assert len(orders) == orders_per_tb * times
-    assert [o.id for o in orders] == list(
-        range(times * orders_per_tb)
-    ), "ids incorrectly created"
+def test_always_assigned_when_free_riders():
+    # if orders not assigned -> no rider free
+    # assert not riders free and orders not assigned
 
+    num_riders = 5
+    max_t = 5
+    num_orders = 4
+    orders = [
+        Order(
+            id=i,
+            creation_at=0,
+            restaurant_address=(i, i),
+            customer_address=(i + 1, i + 1),
+        )
+        for i in range(num_orders)
+    ]
 
-def test_dispatcher():
-    num_riders = 20
-    orders_per_tb = 5
-    times = 5
-    orders = OrderGenerator(orders_per_tb).create_orders(times)
     dispatcher = Dispatcher(
-        dim=5,
-        orders=orders,
-        num_riders=num_riders,
+        bag_limit=1, dim=5, orders=orders, num_riders=num_riders, max_t=max_t
     )
     assert len(dispatcher.riders) == num_riders
     dispatcher.step()
-    assert set([r.state for r in dispatcher.riders][:orders_per_tb]) == set(
-        [RiderStatus.RIDER_GOING_TO_VENDOR]
-    )
-    assert set([r.state for r in dispatcher.riders][orders_per_tb:]) == set(
-        [RiderStatus.RIDER_FREE]
-    )
-    dispatcher.step()
-    assert set([r.state for r in dispatcher.riders][orders_per_tb:]).issuperset(
-        set([RiderStatus.RIDER_FREE, RiderStatus.RIDER_GOING_TO_VENDOR])
+
+    assert not (
+        any([o.assigned_at is None for o in dispatcher.orders])
+        and any([r.state == RiderStatus.RIDER_FREE for r in dispatcher.riders])
     )
 
 
 def test_states():
     np.random.seed(19)
-    num_riders = 2
+    num_riders = 1
+    max_t = 10
     num_orders = 2
-    times = 10
-    orders = OrderGenerator(num_orders).create_orders(times)
+
+    orders = [
+        Order(
+            id=i,
+            creation_at=0,
+            restaurant_address=(i, i),
+            customer_address=(i + 1, i),
+        )
+        for i in range(num_orders)
+    ]
+
     dispatcher = Dispatcher(
+        bag_limit=1,
+        max_t=max_t,
         dim=5,
         orders=orders,
         num_riders=num_riders,
     )
-    assert dispatcher.riders[0].queue == []
     dispatcher.step()
-    assert len(dispatcher.riders[0].queue) == 1
-    # assert rider state is rider going to vendor
-    assert dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR
+    assert (
+        len(dispatcher.riders[0].queue) == 1
+    ), "the rider should have an order assigned"
+    assert (
+        dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR
+    ), "the state should be going to vendor"
 
     # check status change from going to vendor to going to customer
     while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR:
         dispatcher.step()
-    assert len(dispatcher.riders[0].queue) == 0  # TODO change when stacking is allowed
-    assert len(dispatcher.riders[0].bag) >= 1  # TODO change when stacking is allowed
-
+    assert (
+        len(dispatcher.riders[0].queue) == 0
+    ), """When restarurant is reached
+        and rider picking up from only one restaurant,
+        queue should be empty"""  # TODO 2 asserts that go together
+    assert (
+        len(dispatcher.riders[0].bag) >= 1
+    ), "when restarurant is reached, bag should have the orders"
     while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
         dispatcher.step()
     assert len(dispatcher.riders[0].bag) == 0
@@ -73,13 +86,15 @@ def test_orders_times_steps():
     np.random.seed(19)
     num_riders = 1
     num_orders = 1
-    times = 10
+    max_t = 10
 
-    orders = OrderGenerator(num_orders).create_orders(times)
+    orders = OrderGenerator(num_orders).create_orders(max_t)
     dispatcher = Dispatcher(
+        bag_limit=1,
         dim=5,
         orders=orders,
         num_riders=num_riders,
+        max_t=max_t,
     )
     assert all([o.assigned_at is None for o in dispatcher.orders])
     assert all([o.pick_up_at is None for o in dispatcher.orders])
@@ -122,6 +137,8 @@ def test_stacking():
         for i, cust_address in enumerate([(2, 3), (3, 4)])
     ]
     dispatcher = Dispatcher(
+        bag_limit=2,
+        max_t=3,
         dim=5,
         orders=orders,
         num_riders=num_riders,
