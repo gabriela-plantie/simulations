@@ -68,7 +68,6 @@ class Rider(Agent):
             actual_position = (x, y - 1)
 
         self.model.grid.move_agent(agent=self, pos=actual_position)
-        print("x")
 
     def step(self):
         if self._goal_position is None:

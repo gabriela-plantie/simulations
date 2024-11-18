@@ -5,7 +5,7 @@ from utils import RiderGenerator
 
 
 class Dispatcher(Model):
-    def __init__(self, dim, orders, num_riders, max_t, bag_limit):
+    def __init__(self, dim, orders, num_riders, max_t, bag_limit, slowness=1):
         super().__init__()
         self.datacollector = DataCollector(
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
@@ -21,13 +21,13 @@ class Dispatcher(Model):
                     [r.state == RiderStatus.RIDER_GOING_TO_CUSTOMER for r in m.riders]
                 ),
                 "orders_assigned": lambda m: sum(
-                    [o.assigned_at is not None for o in self.orders]
+                    [o.assigned_at is not None for o in m.orders]
                 ),
                 "orders_picked_up": lambda m: sum(
-                    [o.pick_up_at is not None for o in self.orders]
+                    [o.pick_up_at is not None for o in m.orders]
                 ),
                 "orders_delivered": lambda m: sum(
-                    [o.drop_off_at is not None for o in self.orders]
+                    [o.drop_off_at is not None for o in m.orders]
                 ),
             }
         )
@@ -39,13 +39,21 @@ class Dispatcher(Model):
         self.orders = orders
         self.riders = RiderGenerator(model=self, num_riders=num_riders).create_riders()
         self.orders_to_assign = []
+        self.slowness = slowness
+        self.sub_t = 0
 
     def step(self):
+        self.datacollector.collect(self)
+        self.sub_t += 1
+        if self.sub_t < self.slowness:
+            return
+        self.sub_t = self.sub_t % self.slowness
+
         self.get_orders_to_assign()
         self.assign_orders()
 
         self.agents.do("step")
-        self.datacollector.collect(self)
+
         self.schedule.step()
 
         self.t += 1
@@ -116,5 +124,4 @@ class Dispatcher(Model):
                 ):
                     rider.add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
-                    print(f"remueve {order}")
                     break

@@ -1,0 +1,3 @@
+solara==1.41.0
+solara-server==1.41.0
+solara-ui==1.41.0
