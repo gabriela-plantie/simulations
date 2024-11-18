@@ -9,7 +9,7 @@ def test_collector():
 
     np.random.seed(19)
     num_riders = 1
-    max_t = 11
+    max_t = 20
     num_orders = 2
 
     orders = [
@@ -28,6 +28,7 @@ def test_collector():
         dim=5,
         orders=orders,
         num_riders=num_riders,
+        starting_point=(0, 0),
     )
 
     for _ in range(max_t):
@@ -87,3 +88,6 @@ def test_collector():
         ]
     ), """to be picked up orders should be assigned
       and to be delivered it has to be picked up"""
+
+
+# TODO add test case for deliver time!

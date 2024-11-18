@@ -1,3 +1,4 @@
+import numpy as np
 from mesa import DataCollector, Model, space, time
 
 from agents.riders import RiderStatus
@@ -5,7 +6,16 @@ from utils import RiderGenerator
 
 
 class Dispatcher(Model):
-    def __init__(self, dim, orders, num_riders, max_t, bag_limit, slowness=1):
+    def __init__(
+        self,
+        dim,
+        orders,
+        num_riders,
+        max_t,
+        bag_limit,
+        starting_point=(2, 2),
+        slowness=1,
+    ):
         super().__init__()
         self.datacollector = DataCollector(
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
@@ -29,6 +39,19 @@ class Dispatcher(Model):
                 "orders_delivered": lambda m: sum(
                     [o.drop_off_at is not None for o in m.orders]
                 ),
+                "orders_waiting": lambda m: sum(
+                    [(o.assigned_at is None) for o in m.orders]
+                ),
+                "delivery_time": lambda m: np.mean(
+                    [
+                        (o.drop_off_at - o.creation_at)
+                        for o in m.orders
+                        if o.drop_off_at is not None
+                    ]
+                ),
+                "bag_size": lambda m: np.mean(
+                    [len(r._bag) for r in m.riders if len(r._bag) > 0]
+                ),
             }
         )
         self.bag_limit = bag_limit
@@ -37,7 +60,9 @@ class Dispatcher(Model):
         self.grid = space.MultiGrid(width=dim, height=dim, torus=True)
         self.schedule = time.RandomActivation(self)
         self.orders = orders
-        self.riders = RiderGenerator(model=self, num_riders=num_riders).create_riders()
+        self.riders = RiderGenerator(
+            model=self, num_riders=num_riders, starting_point=starting_point
+        ).create_riders()
         self.orders_to_assign = []
         self.slowness = slowness
         self.sub_t = 0
