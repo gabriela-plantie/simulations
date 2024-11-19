@@ -1,7 +1,8 @@
 import numpy as np
+import pytest
 
 from agents.orders import Order
-from agents.riders import RiderStatus
+from agents.riders import Rider, RiderStatus
 from delivering import Dispatcher
 from utils import OrderGenerator
 
@@ -22,9 +23,13 @@ def test_always_assigned_when_free_riders():
         )
         for i in range(num_orders)
     ]
+    riders = [
+        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for _ in range(num_riders)
+    ]
 
     dispatcher = Dispatcher(
-        bag_limit=1, dim=5, orders=orders, num_riders=num_riders, max_t=max_t
+        bag_limit=1, dim=5, orders=orders, riders=riders, max_t=max_t
     )
     assert len(dispatcher.riders) == num_riders
     dispatcher.step()
@@ -45,10 +50,15 @@ def test_states():
         Order(
             id=i,
             creation_at=0,
-            restaurant_address=(i, i),
+            restaurant_address=(i + 1, i),
             customer_address=(i + 1, i),
         )
         for i in range(num_orders)
+    ]
+
+    riders = [
+        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for _ in range(num_riders)
     ]
 
     dispatcher = Dispatcher(
@@ -56,7 +66,7 @@ def test_states():
         max_t=max_t,
         dim=5,
         orders=orders,
-        num_riders=num_riders,
+        riders=riders,
     )
     dispatcher.step()
     assert (
@@ -89,11 +99,15 @@ def test_orders_times_steps():
     max_t = 10
 
     orders = OrderGenerator(num_orders).create_orders(max_t)
+    riders = [
+        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for _ in range(num_riders)
+    ]
     dispatcher = Dispatcher(
         bag_limit=1,
         dim=5,
         orders=orders,
-        num_riders=num_riders,
+        riders=riders,
         max_t=max_t,
     )
     assert all([o.assigned_at is None for o in dispatcher.orders])
@@ -136,13 +150,16 @@ def test_stacking():
         )
         for i, cust_address in enumerate([(2, 2), (2, 3)])
     ]
+    riders = [
+        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for _ in range(num_riders)
+    ]
     dispatcher = Dispatcher(
         bag_limit=2,
         max_t=5,
         dim=5,
         orders=orders,
-        num_riders=num_riders,
-        starting_point=(0, 0),
+        riders=riders,
     )
     dispatcher.step()
     assert len(dispatcher.riders[0]._queue) == 2
@@ -154,3 +171,36 @@ def test_stacking():
     # TODO fix pick up -> bag creation
     # should move all orders in queue to bag at once if restaurant is the same
     # TODO add q en un momento tiene los dos en la bag
+
+
+@pytest.mark.parametrize(
+    "creation_at, shift_start_at,expected_assigned_at",
+    [
+        # (0, 2, 2),
+        (0, 0, 0)
+    ],
+)
+def test_assignement_within_shift(creation_at, shift_start_at, expected_assigned_at):
+
+    rider = [
+        Rider(
+            id=1, shift_start_at=shift_start_at, shift_end_at=4, starting_point=(1, 1)
+        )
+    ]
+    order = [
+        Order(
+            id=1,
+            creation_at=creation_at,
+            restaurant_address=(2, 2),
+            customer_address=(3, 3),
+        )
+    ]
+    dispatcher = Dispatcher(
+        bag_limit=1,
+        max_t=5,
+        dim=5,
+        orders=order,
+        riders=rider,
+    )
+    dispatcher.step()
+    assert dispatcher.orders[0].assigned_at == expected_assigned_at

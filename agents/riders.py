@@ -9,11 +9,20 @@ class RiderStatus(str, Enum):
     RIDER_GOING_TO_CUSTOMER = "rider is going to customer with the order"
 
 
-class Rider(Agent):
-    def __init__(self, unique_id, model, shift_start_at, shift_end_at):
+class Rider:
+    def __init__(self, id, shift_start_at, shift_end_at, starting_point):
+        self.id = id
+        self.shift_start_at = shift_start_at
+        self.shift_end_at = shift_end_at
+        self.starting_point = starting_point
+
+
+class RiderAgent(Agent):
+    def __init__(self, id, model, shift_start_at, shift_end_at, starting_point):
         super().__init__(model=model)
         self.shift_start_at = shift_start_at
         self.shift_end_at = shift_end_at
+        self.starting_point = starting_point
         self.state = RiderStatus.RIDER_FREE
         self._queue = []
         self._bag = []

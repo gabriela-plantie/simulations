@@ -10,10 +10,9 @@ class Dispatcher(Model):
         self,
         dim,
         orders,
-        num_riders,
+        riders,
         max_t,
         bag_limit,
-        starting_point=(2, 2),
         slowness=1,
     ):
         super().__init__()
@@ -64,9 +63,7 @@ class Dispatcher(Model):
         self.grid = space.MultiGrid(width=dim, height=dim, torus=True)
         self.schedule = time.RandomActivation(self)
         self.orders = orders
-        self.riders = RiderGenerator(
-            model=self, num_riders=num_riders, starting_point=starting_point
-        ).create_riders()
+        self.riders = RiderGenerator(model=self, riders=riders).create_agents()
         self.orders_to_assign = []
         self.slowness = slowness
         self.sub_t = 0
