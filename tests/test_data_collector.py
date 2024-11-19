@@ -1,10 +1,12 @@
+import math
+
 import numpy as np
 
 from agents.orders import Order
 from delivering import Dispatcher
 
 
-def test_collector():
+def test_collector_no_stacking():
     # must have at each t riders free, riders going to vendor, riders going to customer
 
     np.random.seed(19)
@@ -91,3 +93,46 @@ def test_collector():
 
 
 # TODO add test case for deliver time!
+
+
+def test_collector_stacking():
+    # must have at each t riders free, riders going to vendor, riders going to customer
+
+    np.random.seed(19)
+    num_riders = 2
+    max_t = 30
+    num_orders = 2
+
+    orders = [
+        Order(
+            id=i,
+            creation_at=0,
+            restaurant_address=(3, 3),
+            customer_address=(0, i * 2),
+        )
+        for i in range(num_orders)
+    ]
+
+    dispatcher = Dispatcher(
+        bag_limit=2,
+        max_t=max_t,
+        dim=10,
+        orders=orders,
+        num_riders=num_riders,
+        starting_point=(0, 0),
+    )
+
+    for _ in range(max_t):
+        dispatcher.step()
+
+    assert (
+        max(
+            list(
+                filter(
+                    lambda x: not math.isnan(x),
+                    dispatcher.datacollector.model_vars["bag_size"],
+                )
+            )
+        )
+        == 2
+    ), "Even though we have 2 riders, there should be stacking (bag size of 2)"
