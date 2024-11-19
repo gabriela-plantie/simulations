@@ -1,28 +1,28 @@
 import numpy as np
 
 from agents.orders import Order
-from agents.riders import Rider
+from agents.riders import RiderAgent
 
 
 class RiderGenerator:
-    def __init__(self, model, num_riders, starting_point):
+    def __init__(self, model, riders):
         self.model = model
-        self.num_riders = num_riders
-        self.starting_point = starting_point
+        self.riders = riders
 
-    def create_riders(self):
+    def create_agents(self):
         riders = [
-            Rider(
+            RiderAgent(
                 model=self.model,
-                unique_id=r,
-                shift_end_at=10,
-                shift_start_at=0,
+                id=r.id,
+                shift_start_at=r.shift_start_at,
+                shift_end_at=r.shift_end_at,
+                starting_point=r.starting_point,
             )
-            for r in range(self.num_riders)
+            for r in self.riders
         ]
 
         for rider in riders:
-            self.model.grid.place_agent(rider, self.starting_point)
+            self.model.grid.place_agent(rider, rider.starting_point)
 
         return riders
 

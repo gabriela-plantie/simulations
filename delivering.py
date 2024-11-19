@@ -10,10 +10,9 @@ class Dispatcher(Model):
         self,
         dim,
         orders,
-        num_riders,
+        riders,
         max_t,
         bag_limit,
-        starting_point=(2, 2),
         slowness=1,
     ):
         super().__init__()
@@ -64,9 +63,7 @@ class Dispatcher(Model):
         self.grid = space.MultiGrid(width=dim, height=dim, torus=True)
         self.schedule = time.RandomActivation(self)
         self.orders = orders
-        self.riders = RiderGenerator(
-            model=self, num_riders=num_riders, starting_point=starting_point
-        ).create_riders()
+        self.riders = RiderGenerator(model=self, riders=riders).create_agents()
         self.orders_to_assign = []
         self.slowness = slowness
         self.sub_t = 0
@@ -116,10 +113,13 @@ class Dispatcher(Model):
         return list(
             self.agents.select(
                 lambda a: (
-                    (a.state == RiderStatus.RIDER_FREE)
-                    or (
-                        (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                        and (len(a._queue) + len(a._bag) < self.bag_limit)
+                    (a.shift_start_at <= self.t)
+                    and (
+                        (a.state == RiderStatus.RIDER_FREE)
+                        or (
+                            (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
+                            and (len(a._queue) + len(a._bag) < self.bag_limit)
+                        )
                     )
                 )
             )
@@ -151,7 +151,12 @@ class Dispatcher(Model):
             # if it cannot not then it adds it to the free riders
             if order in self.orders_to_assign[:]:
                 for rider in list(
-                    self.agents.select(lambda a: a.state == RiderStatus.RIDER_FREE)
+                    self.agents.select(
+                        lambda a: (
+                            (a.shift_start_at <= self.t)
+                            and (a.state == RiderStatus.RIDER_FREE)
+                        )
+                    )
                 ):
                     rider.add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)

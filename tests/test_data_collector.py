@@ -3,6 +3,7 @@ import math
 import numpy as np
 
 from agents.orders import Order
+from agents.riders import Rider
 from delivering import Dispatcher
 
 
@@ -23,14 +24,17 @@ def test_collector_no_stacking():
         )
         for i in range(num_orders)
     ]
+    riders = [
+        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for _ in range(num_riders)
+    ]
 
     dispatcher = Dispatcher(
         bag_limit=1,
         max_t=max_t,
         dim=5,
         orders=orders,
-        num_riders=num_riders,
-        starting_point=(0, 0),
+        riders=riders,
     )
 
     for _ in range(max_t):
@@ -113,13 +117,16 @@ def test_collector_stacking():
         for i in range(num_orders)
     ]
 
+    riders = [
+        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for _ in range(num_riders)
+    ]
     dispatcher = Dispatcher(
         bag_limit=2,
         max_t=max_t,
         dim=10,
         orders=orders,
-        num_riders=num_riders,
-        starting_point=(0, 0),
+        riders=riders,
     )
 
     for _ in range(max_t):
