@@ -199,5 +199,6 @@ def test_assignement_within_shift(creation_at, shift_start_at, expected_assigned
         orders=order,
         riders=rider,
     )
-    dispatcher.step()
+    for _ in range(expected_assigned_at + 1):
+        dispatcher.step()
     assert dispatcher.orders[0].assigned_at == expected_assigned_at

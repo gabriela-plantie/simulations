@@ -113,10 +113,13 @@ class Dispatcher(Model):
         return list(
             self.agents.select(
                 lambda a: (
-                    (a.state == RiderStatus.RIDER_FREE)
-                    or (
-                        (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                        and (len(a._queue) + len(a._bag) < self.bag_limit)
+                    (a.shift_start_at <= self.t)
+                    and (
+                        (a.state == RiderStatus.RIDER_FREE)
+                        or (
+                            (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
+                            and (len(a._queue) + len(a._bag) < self.bag_limit)
+                        )
                     )
                 )
             )
@@ -148,7 +151,12 @@ class Dispatcher(Model):
             # if it cannot not then it adds it to the free riders
             if order in self.orders_to_assign[:]:
                 for rider in list(
-                    self.agents.select(lambda a: a.state == RiderStatus.RIDER_FREE)
+                    self.agents.select(
+                        lambda a: (
+                            (a.shift_start_at <= self.t)
+                            and (a.state == RiderStatus.RIDER_FREE)
+                        )
+                    )
                 ):
                     rider.add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
