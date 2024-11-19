@@ -49,9 +49,8 @@ class Dispatcher(Model):
                         if o.drop_off_at is not None
                     ]
                 ),
-                "bag_size": lambda m: np.mean(
-                    [len(r._bag) for r in m.riders if len(r._bag) > 0]
-                ),
+                "queue_size": lambda m: np.mean([len(r._queue) for r in m.riders]),
+                "bag_size": lambda m: np.mean([len(r._bag) for r in m.riders]),
             }
         )
         self.bag_limit = bag_limit
@@ -87,9 +86,11 @@ class Dispatcher(Model):
             return
 
     def get_orders_to_assign(self):
+        orders_to_assign = self.get_orders_assigned()
         # filter orders in state assigned from orders to assign
-        for o in self.get_orders_assigned():  # move to rider.add_order_to_queue
-            if o in self.orders_to_assign:
+        for o in orders_to_assign[:]:  # move to rider.add_order_to_queue
+            # TODO add a test for the copy -> assign many orders while rider going.
+            if o in self.orders_to_assign[:]:
                 self.orders_to_assign.remove(o)
 
         # add new list of orders to "orders to assign" only if self.t <
@@ -127,7 +128,7 @@ class Dispatcher(Model):
 
             # first tries to add the order
             # to a rider that is already going to the vendor
-            for rider in available_riders:
+            for rider in available_riders[:]:
                 if (
                     (rider.state == RiderStatus.RIDER_GOING_TO_VENDOR)
                     and (len(rider._queue) + len(rider._bag) < self.bag_limit)

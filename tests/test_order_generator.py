@@ -147,6 +147,9 @@ def test_stacking():
     dispatcher.step()
     assert len(dispatcher.riders[0]._queue) == 2
     dispatcher.step()
+    dispatcher.step()
+    assert len(dispatcher.riders[0]._queue) == 0
+    assert len(dispatcher.riders[0]._bag) == 2
 
     # TODO fix pick up -> bag creation
     # should move all orders in queue to bag at once if restaurant is the same
