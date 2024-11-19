@@ -175,10 +175,7 @@ def test_stacking():
 
 @pytest.mark.parametrize(
     "creation_at, shift_start_at,expected_assigned_at",
-    [
-        # (0, 2, 2),
-        (0, 0, 0)
-    ],
+    [(0, 2, 2), (0, 0, 0)],
 )
 def test_assignement_within_shift(creation_at, shift_start_at, expected_assigned_at):
 
