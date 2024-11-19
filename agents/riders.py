@@ -68,7 +68,6 @@ class Rider(Agent):
             actual_position = (x, y - 1)
 
         self.model.grid.move_agent(agent=self, pos=actual_position)
-        print("x")
 
     def step(self):
         if self._goal_position is None:
@@ -76,7 +75,7 @@ class Rider(Agent):
 
         if self.pos == self._goal_position:
             if self.state == RiderStatus.RIDER_GOING_TO_VENDOR:
-                for order in self._queue:
+                for order in self._queue[:]:
                     self.add_order_to_bag(order, self.model.t)
                     self.remove_order_from_queue(order)
 

@@ -125,7 +125,7 @@ def test_orders_times_steps():
 
 
 def test_stacking():
-    restaurant_address = (2, 4)
+    restaurant_address = (1, 1)
     num_riders = 2
     orders = [
         Order(
@@ -134,16 +134,23 @@ def test_stacking():
             restaurant_address=restaurant_address,
             customer_address=cust_address,
         )
-        for i, cust_address in enumerate([(2, 3), (3, 4)])
+        for i, cust_address in enumerate([(2, 2), (2, 3)])
     ]
     dispatcher = Dispatcher(
         bag_limit=2,
-        max_t=3,
+        max_t=5,
         dim=5,
         orders=orders,
         num_riders=num_riders,
+        starting_point=(0, 0),
     )
     dispatcher.step()
     assert len(dispatcher.riders[0]._queue) == 2
+    dispatcher.step()
+    dispatcher.step()
+    assert len(dispatcher.riders[0]._queue) == 0
+    assert len(dispatcher.riders[0]._bag) == 2
 
+    # TODO fix pick up -> bag creation
+    # should move all orders in queue to bag at once if restaurant is the same
     # TODO add q en un momento tiene los dos en la bag

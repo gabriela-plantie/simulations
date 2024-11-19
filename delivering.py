@@ -1,3 +1,4 @@
+import numpy as np
 from mesa import DataCollector, Model, space, time
 
 from agents.riders import RiderStatus
@@ -5,11 +6,57 @@ from utils import RiderGenerator
 
 
 class Dispatcher(Model):
-    def __init__(self, dim, orders, num_riders, max_t, bag_limit):
+    def __init__(
+        self,
+        dim,
+        orders,
+        num_riders,
+        max_t,
+        bag_limit,
+        starting_point=(2, 2),
+        slowness=1,
+    ):
         super().__init__()
         self.datacollector = DataCollector(
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
-            agent_reporters={"State": "state"}
+            # agent_reporters={"State": "state"}
+            {
+                "riders_free": lambda m: sum(
+                    [r.state == RiderStatus.RIDER_FREE for r in m.riders]
+                ),
+                "riders_going_to_vendor": lambda m: sum(
+                    [r.state == RiderStatus.RIDER_GOING_TO_VENDOR for r in m.riders]
+                ),
+                "riders_going_to_customer": lambda m: sum(
+                    [r.state == RiderStatus.RIDER_GOING_TO_CUSTOMER for r in m.riders]
+                ),
+                "orders_delivered": lambda m: sum(
+                    [o.drop_off_at is not None for o in m.orders]
+                ),
+                "orders_waiting": lambda m: sum(
+                    [(o.assigned_at is None) for o in m.orders]
+                ),
+                "delivery_time": lambda m: np.mean(
+                    [
+                        (o.drop_off_at - o.creation_at)
+                        for o in m.orders
+                        if o.drop_off_at is not None
+                    ]
+                ),
+                "queue_size": lambda m: np.mean(
+                    [len(r._queue) for r in m.riders if len(r._queue) > 0]
+                ),
+                # TODO FIX warning mean of empty
+                "bag_size": lambda m: np.mean(
+                    [len(r._bag) for r in m.riders if len(r._bag) > 0]
+                ),
+                "orders_assigned": lambda m: sum(
+                    [o.assigned_at is not None for o in m.orders]
+                ),
+                "orders_picked_up": lambda m: sum(
+                    [o.pick_up_at is not None for o in m.orders]
+                ),
+            }
         )
         self.bag_limit = bag_limit
         self.max_t = max_t
@@ -17,15 +64,25 @@ class Dispatcher(Model):
         self.grid = space.MultiGrid(width=dim, height=dim, torus=True)
         self.schedule = time.RandomActivation(self)
         self.orders = orders
-        self.riders = RiderGenerator(model=self, num_riders=num_riders).create_riders()
+        self.riders = RiderGenerator(
+            model=self, num_riders=num_riders, starting_point=starting_point
+        ).create_riders()
         self.orders_to_assign = []
+        self.slowness = slowness
+        self.sub_t = 0
 
     def step(self):
+        self.datacollector.collect(self)
+        self.sub_t += 1
+        if self.sub_t < self.slowness:
+            return
+        self.sub_t = self.sub_t % self.slowness
+
         self.get_orders_to_assign()
         self.assign_orders()
 
         self.agents.do("step")
-        self.datacollector.collect(self)
+
         self.schedule.step()
 
         self.t += 1
@@ -34,9 +91,11 @@ class Dispatcher(Model):
             return
 
     def get_orders_to_assign(self):
+        orders_to_assign = self.get_orders_assigned()
         # filter orders in state assigned from orders to assign
-        for o in self.get_orders_assigned():  # move to rider.add_order_to_queue
-            if o in self.orders_to_assign:
+        for o in orders_to_assign[:]:  # move to rider.add_order_to_queue
+            # TODO add a test for the copy -> assign many orders while rider going.
+            if o in self.orders_to_assign[:]:
                 self.orders_to_assign.remove(o)
 
         # add new list of orders to "orders to assign" only if self.t <
@@ -74,7 +133,7 @@ class Dispatcher(Model):
 
             # first tries to add the order
             # to a rider that is already going to the vendor
-            for rider in available_riders:
+            for rider in available_riders[:]:
                 if (
                     (rider.state == RiderStatus.RIDER_GOING_TO_VENDOR)
                     and (len(rider._queue) + len(rider._bag) < self.bag_limit)
@@ -96,5 +155,4 @@ class Dispatcher(Model):
                 ):
                     rider.add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
-                    print(f"remueve {order}")
                     break

@@ -5,9 +5,10 @@ from agents.riders import Rider
 
 
 class RiderGenerator:
-    def __init__(self, model, num_riders):
+    def __init__(self, model, num_riders, starting_point):
         self.model = model
         self.num_riders = num_riders
+        self.starting_point = starting_point
 
     def create_riders(self):
         riders = [
@@ -21,7 +22,7 @@ class RiderGenerator:
         ]
 
         for rider in riders:
-            self.model.grid.place_agent(rider, (2, 2))
+            self.model.grid.place_agent(rider, self.starting_point)
 
         return riders
 
