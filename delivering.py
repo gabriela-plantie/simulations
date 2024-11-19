@@ -30,12 +30,6 @@ class Dispatcher(Model):
                 "riders_going_to_customer": lambda m: sum(
                     [r.state == RiderStatus.RIDER_GOING_TO_CUSTOMER for r in m.riders]
                 ),
-                "orders_assigned": lambda m: sum(
-                    [o.assigned_at is not None for o in m.orders]
-                ),
-                "orders_picked_up": lambda m: sum(
-                    [o.pick_up_at is not None for o in m.orders]
-                ),
                 "orders_delivered": lambda m: sum(
                     [o.drop_off_at is not None for o in m.orders]
                 ),
@@ -49,8 +43,19 @@ class Dispatcher(Model):
                         if o.drop_off_at is not None
                     ]
                 ),
-                "queue_size": lambda m: np.mean([len(r._queue) for r in m.riders]),
-                "bag_size": lambda m: np.mean([len(r._bag) for r in m.riders]),
+                "queue_size": lambda m: np.mean(
+                    [len(r._queue) for r in m.riders if len(r._queue) > 0]
+                ),
+                # TODO FIX warning mean of empty
+                "bag_size": lambda m: np.mean(
+                    [len(r._bag) for r in m.riders if len(r._bag) > 0]
+                ),
+                "orders_assigned": lambda m: sum(
+                    [o.assigned_at is not None for o in m.orders]
+                ),
+                "orders_picked_up": lambda m: sum(
+                    [o.pick_up_at is not None for o in m.orders]
+                ),
             }
         )
         self.bag_limit = bag_limit
