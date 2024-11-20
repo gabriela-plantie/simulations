@@ -241,32 +241,33 @@ def test_pickup_after_prep_time_passed(
 
 
 @pytest.mark.parametrize(
-    "creation_at,preparation_time,distance_to_vendor,expected_pick_up_at",
+    "preparation_time1,preparation_time2,distance_to_vendor,expected_pick_up_at2",
     [
-        (0, 1, 0, 1),  # the rider does not have to travel
-        (0, 1, 1, 1),  # the preparation = the rider distance time
-        (0, 2, 1, 2),  # the preparation >= rider distance time
+        (0, 1, 0, 1),  # the rider does not have to travel -> only prep
+        (0, 1, 1, 1),  # the preparation2 = the rider distance time
+        (0, 2, 1, 2),  # the preparation2 >= rider distance time
+        (1, 2, 1, 2),  # the preparation1 == distance_to_vendor + 1 extra of prep
     ],
 )
 def test_pickup_after_prep_time_passed_2orders(
-    creation_at, preparation_time, distance_to_vendor, expected_pick_up_at
+    preparation_time1, preparation_time2, distance_to_vendor, expected_pick_up_at2
 ):
     sp = (1, 1)
     rider = [Rider(id=1, shift_start_at=0, shift_end_at=4, starting_point=sp)]
     order = [
         Order(
             id=0,
-            creation_at=creation_at,
+            creation_at=0,
             restaurant_address=(sp[0], sp[1] + distance_to_vendor),
             customer_address=(3, 3),
-            preparation_time=0,
+            preparation_time=preparation_time1,
         ),
         Order(
             id=1,
-            creation_at=creation_at,
+            creation_at=0,
             restaurant_address=(sp[0], sp[1] + distance_to_vendor),
             customer_address=(3, 3),
-            preparation_time=preparation_time,
+            preparation_time=preparation_time2,
         ),
     ]
     dispatcher = Dispatcher(
@@ -276,7 +277,7 @@ def test_pickup_after_prep_time_passed_2orders(
         orders=order,
         riders=rider,
     )
-    for _ in range(expected_pick_up_at + 1):
+    for _ in range(expected_pick_up_at2 + 1):
         dispatcher.step()
-    assert dispatcher.orders[0].pick_up_at == distance_to_vendor
-    assert dispatcher.orders[1].pick_up_at == expected_pick_up_at
+    assert dispatcher.orders[0].pick_up_at == max(distance_to_vendor, preparation_time1)
+    assert dispatcher.orders[1].pick_up_at == expected_pick_up_at2
