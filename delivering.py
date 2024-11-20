@@ -161,3 +161,7 @@ class Dispatcher(Model):
                     rider.add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
                     break
+
+    def sort_orders_in_bag(self, rider):
+        rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
+        rider.goal_position = rider._bag[0].customer_address

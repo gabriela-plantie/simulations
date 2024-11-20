@@ -38,16 +38,8 @@ class RiderAgent(Agent):
         self._queue.remove(order)
 
     def add_order_to_bag(self, order, t):
-        """
-        Add order to bag (picked up from vendor).
-        If bag was empty -> goal position is this order's customer position
-        Else -> goal_position remains (from previous order in bag)
-        """
-        if len(self._bag) == 0:
-            self._goal_position = order.customer_address
         self._bag.append(order)
         order.rider_pick_up(t)
-        self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
 
     def remove_order_from_bag(self, order, t):
         """
@@ -88,6 +80,10 @@ class RiderAgent(Agent):
                     if order.creation_at + order.preparation_time <= self.model.t:
                         self.add_order_to_bag(order, self.model.t)
                         self.remove_order_from_queue(order)
+
+                if (len(self._queue) == 0) and (len(self._bag) > 0):
+                    self.model.sort_orders_in_bag(self)
+                    self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
 
             elif self.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
                 order = self._bag[0]
