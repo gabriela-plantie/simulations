@@ -202,3 +202,39 @@ def test_assignement_within_shift(creation_at, shift_start_at, expected_assigned
     for _ in range(expected_assigned_at + 1):
         dispatcher.step()
     assert dispatcher.orders[0].assigned_at == expected_assigned_at
+
+
+@pytest.mark.parametrize(
+    "creation_at,preparation_time,distance_to_vendor,expected_pick_up_at",
+    [
+        (0, 0, 0, 0),
+        (0, 0, 2, 2),
+        (0, 1, 0, 1),  # the rider does not have to travel
+        (0, 1, 1, 1),  # the preparation = the rider distance time
+        (0, 2, 1, 2),  # the preparation >= rider distance time
+    ],
+)
+def test_pickup_after_prep_time_passed(
+    creation_at, preparation_time, distance_to_vendor, expected_pick_up_at
+):
+    sp = (1, 1)
+    rider = [Rider(id=1, shift_start_at=0, shift_end_at=4, starting_point=sp)]
+    order = [
+        Order(
+            id=1,
+            creation_at=creation_at,
+            restaurant_address=(sp[0], sp[1] + distance_to_vendor),
+            customer_address=(3, 3),
+            preparation_time=preparation_time,
+        )
+    ]
+    dispatcher = Dispatcher(
+        bag_limit=1,
+        max_t=5,
+        dim=5,
+        orders=order,
+        riders=rider,
+    )
+    for _ in range(expected_pick_up_at + 1):
+        dispatcher.step()
+    assert dispatcher.orders[0].pick_up_at == expected_pick_up_at
