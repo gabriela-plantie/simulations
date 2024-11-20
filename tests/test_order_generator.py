@@ -208,8 +208,10 @@ def test_assignement_within_shift(creation_at, shift_start_at, expected_assigned
     "creation_at,preparation_time,distance_to_vendor,expected_pick_up_at",
     [
         (0, 0, 0, 0),
-        (0, 1, 0, 1),
-        (0, 1, 1, 2),
+        (0, 0, 2, 2),
+        (0, 1, 0, 1),  # the rider does not have to travel
+        (0, 1, 1, 1),  # the preparation = the rider distance time
+        (0, 2, 1, 2),  # the preparation >= rider distance time
     ],
 )
 def test_pickup_after_prep_time_passed(
