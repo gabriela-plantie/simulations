@@ -1,4 +1,4 @@
-from utils import OrderGenerator
+from scripts.utils import OrderGenerator
 
 
 def test_create_orders():

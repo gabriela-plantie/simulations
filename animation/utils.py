@@ -2,7 +2,7 @@ import solara
 from matplotlib.figure import Figure
 from mesa.visualization.utils import update_counter
 
-from agents.riders import RiderStatus
+from scripts.agents.riders import RiderStatus
 
 
 def agent_portrayal(agent):

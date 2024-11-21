@@ -1,8 +1,8 @@
 import numpy as np
 from mesa import DataCollector, Model, space, time
 
-from agents.riders import RiderStatus
-from utils import RiderGenerator
+from scripts.agents.riders import RiderStatus
+from scripts.utils import RiderGenerator
 
 
 class Dispatcher(Model):
