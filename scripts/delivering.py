@@ -163,5 +163,7 @@ class Dispatcher(Model):
                     break
 
     def sort_orders_in_bag(self, rider):
+        # TODO: in the TSP we need to add the original position
+        # to the list of points!
         rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
         rider.goal_position = rider._bag[0].customer_address

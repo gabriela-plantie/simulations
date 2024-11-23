@@ -60,3 +60,37 @@ def calculate_distances_dict(points: list[Point]):
             if p1 != p2:
                 distances_dict[p1.id][p2.id] = length(p1, p2)
     return distances_dict
+
+
+def initialize_route_with_logic(distance_dict, route):
+    """
+    Nearest neighbor algorithm to set up coherent path.
+    """
+    unvisited = route.copy()
+    current_position = route[0]
+    route = [current_position]
+    unvisited.remove(current_position)
+    total_d = 0  # total distance
+
+    while len(unvisited) > 0:
+        # choose city with the lowest edge weight
+        min_distance = 9999999  # minimum distance to nearest city
+        for point in unvisited:  # for each city
+            [min_point, max_point] = sorted(
+                [current_position, point], key=lambda p: p.id
+            )
+            # sorted([current_position, point])
+            distance = distance_dict[min_point.id][max_point.id]
+            if distance < min_distance:
+                min_distance = distance
+                next_point = point
+
+        total_d += min_distance  # update total distance
+        current_position = next_point  # move to next city
+        route += [current_position]  # add city to tour
+        unvisited.remove(current_position)  # mark visited
+
+    # # Distance to return
+    # [min_point_num, max_point_num] = sorted([route[0], route[len(route) - 1]])
+    # total_d += distance_dict[min_point_num][max_point_num]
+    return total_d, route  # tour distance is [0], since number of cities varies
