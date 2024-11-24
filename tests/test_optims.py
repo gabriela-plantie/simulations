@@ -31,14 +31,13 @@ def test_sort_bag():
     """
     TSP sort of the bag.
     In the following graph:
-    - S is the startiong point of the rider
     - R is restaurant
     - o is no customer
     - numbers represents orders and their positions are the correspondend
     customers places.
     o3ooo
     o20oo
-    SR1oo
+    oR1oo
     ooooo
     ooooo
     """

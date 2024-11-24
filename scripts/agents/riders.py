@@ -81,7 +81,7 @@ class RiderAgent(Agent):
                         self.add_order_to_bag(order, self.model.t)
                         self.remove_order_from_queue(order)
 
-                if (len(self._queue) == 0) and (len(self._bag) > 0):
+                if self.rider_finished_pickup():
                     self.model.sort_orders_in_bag(self)
                     self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
 
@@ -91,3 +91,15 @@ class RiderAgent(Agent):
 
         elif self.pos != self._goal_position:
             self.move()
+
+    def rider_finished_pickup(self):
+        return (len(self._queue) == 0) and (len(self._bag) > 0)
+
+    def rider_has_capacity_in_bag(self, bag_limit):
+        return len(self._queue) + len(self._bag) < bag_limit
+
+    def rider_is_going_to_this_vendor(self, order):
+        return self._goal_position == order.restaurant_address
+
+    def rider_is_free(self, t):
+        return self.state == RiderStatus.RIDER_FREE and self.shift_start_at <= t

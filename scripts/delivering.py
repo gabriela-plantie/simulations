@@ -112,16 +112,8 @@ class Dispatcher(Model):
         """
         return list(
             self.agents.select(
-                lambda a: (
-                    (a.shift_start_at <= self.t)
-                    and (
-                        (a.state == RiderStatus.RIDER_FREE)
-                        or (
-                            (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                            and (len(a._queue) + len(a._bag) < self.bag_limit)
-                        )
-                    )
-                )
+                lambda a: a.rider_is_free(t=self.t)
+                or a.rider_has_capacity_in_bag(bag_limit=self.bag_limit)
             )
         )
 
@@ -134,29 +126,21 @@ class Dispatcher(Model):
             # first tries to add the order
             # to a rider that is already going to the vendor
             for rider in available_riders[:]:
-                if (
-                    (rider.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                    and (len(rider._queue) + len(rider._bag) < self.bag_limit)
-                    and (rider._goal_position == order.restaurant_address)
-                ):
+                if rider.rider_is_going_to_this_vendor(
+                    order
+                ) and rider.rider_has_capacity_in_bag(self.bag_limit):
                     rider.add_order_to_queue(order=order, t=self.t)
                     self.orders_to_assign.remove(order)
 
-                    if (
-                        len(rider._queue) + len(rider._bag) == self.bag_limit
-                    ):  # CHECK tiene sentido?
+                    if not rider.rider_has_capacity_in_bag(self.bag_limit):
+                        # CHECK tiene sentido?
                         available_riders.remove(rider)
                     break
 
             # if it cannot not then it adds it to the free riders
             if order in self.orders_to_assign[:]:
                 for rider in list(
-                    self.agents.select(
-                        lambda a: (
-                            (a.shift_start_at <= self.t)
-                            and (a.state == RiderStatus.RIDER_FREE)
-                        )
-                    )
+                    self.agents.select(lambda a: a.rider_is_free(self.t))
                 ):
                     rider.add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
