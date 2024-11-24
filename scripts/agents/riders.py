@@ -73,23 +73,12 @@ class RiderAgent(Agent):
     def step(self):
         if self._goal_position is None:
             return
-
-        if self.pos == self._goal_position:
+        if self.rider_reached_goal_position():
             if self.state == RiderStatus.RIDER_GOING_TO_VENDOR:
-                for order in self._queue[:]:
-                    if order.creation_at + order.preparation_time <= self.model.t:
-                        self.add_order_to_bag(order, self.model.t)
-                        self.remove_order_from_queue(order)
-
-                if self.rider_finished_pickup():
-                    self.model.sort_orders_in_bag(self)
-                    self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
-
+                self._pickup_orders()
             elif self.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
-                order = self._bag[0]
-                self.remove_order_from_bag(order, self.model.t)
-
-        elif self.pos != self._goal_position:
+                self._deliver_order()
+        else:
             self.move()
 
     def rider_finished_pickup(self):
@@ -103,3 +92,21 @@ class RiderAgent(Agent):
 
     def rider_is_free(self, t):
         return self.state == RiderStatus.RIDER_FREE and self.shift_start_at <= t
+
+    def rider_reached_goal_position(self):
+        return self.pos == self._goal_position
+
+    def _pickup_orders(self):
+        for order in self._queue[:]:
+            if order.order_is_ready(self.model.t):
+                self.add_order_to_bag(order, self.model.t)
+                self.remove_order_from_queue(order)
+
+        if self.rider_finished_pickup():
+            self.model.sort_orders_in_bag(self)  # Ordena los pedidos en la bolsa
+            self.state = RiderStatus.RIDER_GOING_TO_CUSTOMER
+
+    def _deliver_order(self):
+        if self._bag:
+            order = self._bag[0]
+            self.remove_order_from_bag(order, self.model.t)

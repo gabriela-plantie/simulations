@@ -105,11 +105,6 @@ class Dispatcher(Model):
         return [o for o in self.orders if o.creation_at == self.t]
 
     def get_available_riders(self):
-        """
-        Get available riders:
-            - riders that are free or
-            - riders that are going to the vendor and have space in the queue
-        """
         return list(
             self.agents.select(
                 lambda a: a.rider_is_free(t=self.t)

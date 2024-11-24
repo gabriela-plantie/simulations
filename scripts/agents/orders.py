@@ -28,3 +28,6 @@ class Order:
         if self.assigned_at is None or self.pick_up_at is None:
             raise TypeError("Previous time steps missing for order to drop off.")
         self.drop_off_at = drop_off_at
+
+    def order_is_ready(self, t):
+        return self.creation_at + self.preparation_time <= t
