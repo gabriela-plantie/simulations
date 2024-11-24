@@ -1,4 +1,4 @@
-# from collections import namedtuple
+import numpy as np
 
 
 class Point:
@@ -76,11 +76,9 @@ def initialize_route_with_logic(distance_dict, route):
         # choose city with the lowest edge weight
         min_distance = 9999999  # minimum distance to nearest city
         for point in unvisited:  # for each city
-            [min_point, max_point] = sorted(
-                [current_position, point], key=lambda p: p.id
-            )
+
             # sorted([current_position, point])
-            distance = distance_dict[min_point.id][max_point.id]
+            distance = distance_dict[current_position.id][point.id]
             if distance < min_distance:
                 min_distance = distance
                 next_point = point
@@ -94,3 +92,20 @@ def initialize_route_with_logic(distance_dict, route):
     # [min_point_num, max_point_num] = sorted([route[0], route[len(route) - 1]])
     # total_d += distance_dict[min_point_num][max_point_num]
     return total_d, route  # tour distance is [0], since number of cities varies
+
+
+def two_swap(route: list[Point], i: int, j: int):
+    """
+    - i and j are positions.
+    - j > i
+    - if it takes a route that crosses over itself -> untangles it
+    """
+    # assert i<j
+    if j < (len(route) - 1):
+        route = route[:i] + list(np.flipud(route[i : j + 1])) + route[j + 1 :]
+    else:
+        # if j == len(route)
+        route = route[:i] + list(np.flipud(route[i:]))
+    #  assert len(path) == len(set(path))
+    #  assert set(route) == set(path)
+    return route
