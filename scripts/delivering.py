@@ -1,8 +1,8 @@
 import numpy as np
 from mesa import DataCollector, Model, space, time
 
-from agents.riders import RiderStatus
-from utils import RiderGenerator
+from scripts.agents.riders import RiderStatus
+from scripts.utils import RiderGenerator
 
 
 class Dispatcher(Model):
@@ -105,23 +105,10 @@ class Dispatcher(Model):
         return [o for o in self.orders if o.creation_at == self.t]
 
     def get_available_riders(self):
-        """
-        Get available riders:
-            - riders that are free or
-            - riders that are going to the vendor and have space in the queue
-        """
         return list(
             self.agents.select(
-                lambda a: (
-                    (a.shift_start_at <= self.t)
-                    and (
-                        (a.state == RiderStatus.RIDER_FREE)
-                        or (
-                            (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                            and (len(a._queue) + len(a._bag) < self.bag_limit)
-                        )
-                    )
-                )
+                lambda a: a.rider_is_free(t=self.t)
+                or a.rider_has_capacity_in_bag(bag_limit=self.bag_limit)
             )
         )
 
@@ -134,34 +121,28 @@ class Dispatcher(Model):
             # first tries to add the order
             # to a rider that is already going to the vendor
             for rider in available_riders[:]:
-                if (
-                    (rider.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                    and (len(rider._queue) + len(rider._bag) < self.bag_limit)
-                    and (rider._goal_position == order.restaurant_address)
-                ):
-                    rider.add_order_to_queue(order=order, t=self.t)
+                if rider.rider_is_going_to_this_vendor(
+                    order
+                ) and rider.rider_has_capacity_in_bag(self.bag_limit):
+                    rider._add_order_to_queue(order=order, t=self.t)
                     self.orders_to_assign.remove(order)
 
-                    if (
-                        len(rider._queue) + len(rider._bag) == self.bag_limit
-                    ):  # CHECK tiene sentido?
+                    if not rider.rider_has_capacity_in_bag(self.bag_limit):
+                        # CHECK tiene sentido?
                         available_riders.remove(rider)
                     break
 
             # if it cannot not then it adds it to the free riders
             if order in self.orders_to_assign[:]:
                 for rider in list(
-                    self.agents.select(
-                        lambda a: (
-                            (a.shift_start_at <= self.t)
-                            and (a.state == RiderStatus.RIDER_FREE)
-                        )
-                    )
+                    self.agents.select(lambda a: a.rider_is_free(self.t))
                 ):
-                    rider.add_order_to_queue(order, self.t)
+                    rider._add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
                     break
 
     def sort_orders_in_bag(self, rider):
+        # TODO: in the TSP we need to add the original position
+        # to the list of points!
         rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
         rider.goal_position = rider._bag[0].customer_address

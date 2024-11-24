@@ -2,9 +2,9 @@ import math
 
 import numpy as np
 
-from agents.orders import Order
-from agents.riders import Rider
-from delivering import Dispatcher
+from scripts.agents.orders import Order
+from scripts.agents.riders import Rider
+from scripts.delivering import Dispatcher
 
 
 def test_collector_no_stacking():
