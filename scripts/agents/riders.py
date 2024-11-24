@@ -74,10 +74,7 @@ class RiderAgent(Agent):
         if self._goal_position is None:
             return
         if self.rider_reached_goal_position():
-            if self.state == RiderStatus.RIDER_GOING_TO_VENDOR:
-                self._pickup_orders()
-            elif self.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
-                self._deliver_order()
+            self._handle_reached_goal()
         else:
             self.move()
 
@@ -110,3 +107,9 @@ class RiderAgent(Agent):
         if self._bag:
             order = self._bag[0]
             self.remove_order_from_bag(order, self.model.t)
+
+    def _handle_reached_goal(self):
+        if self.state == RiderStatus.RIDER_GOING_TO_VENDOR:
+            self._pickup_orders()
+        elif self.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
+            self._deliver_order()
