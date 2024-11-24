@@ -124,7 +124,7 @@ class Dispatcher(Model):
                 if rider.rider_is_going_to_this_vendor(
                     order
                 ) and rider.rider_has_capacity_in_bag(self.bag_limit):
-                    rider.add_order_to_queue(order=order, t=self.t)
+                    rider._add_order_to_queue(order=order, t=self.t)
                     self.orders_to_assign.remove(order)
 
                     if not rider.rider_has_capacity_in_bag(self.bag_limit):
@@ -137,7 +137,7 @@ class Dispatcher(Model):
                 for rider in list(
                     self.agents.select(lambda a: a.rider_is_free(self.t))
                 ):
-                    rider.add_order_to_queue(order, self.t)
+                    rider._add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
                     break
 

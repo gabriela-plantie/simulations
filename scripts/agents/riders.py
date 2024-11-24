@@ -28,20 +28,20 @@ class RiderAgent(Agent):
         self._bag = []
         self._goal_position = None
 
-    def add_order_to_queue(self, order, t):
+    def _add_order_to_queue(self, order, t):
         self._queue.append(order)
         self._goal_position = order.restaurant_address
-        order.rider_assign(assigned_at=t)
+        order._rider_assign(assigned_at=t)
         self.state = RiderStatus.RIDER_GOING_TO_VENDOR
 
-    def remove_order_from_queue(self, order):
+    def _remove_order_from_queue(self, order):
         self._queue.remove(order)
 
-    def add_order_to_bag(self, order, t):
+    def _add_order_to_bag(self, order, t):
         self._bag.append(order)
-        order.rider_pick_up(t)
+        order._rider_pick_up(t)
 
-    def remove_order_from_bag(self, order, t):
+    def _remove_order_from_bag(self, order, t):
         """
         Remove order from bag when delivered.
         Update goal position for rider:
@@ -51,7 +51,7 @@ class RiderAgent(Agent):
         self._bag.remove(order)
         if len(self._bag) > 0:
             self._goal_position = self._bag[0].customer_address
-        order.rider_drop_off(t)
+        order._rider_drop_off(t)
         if len(self._bag) == 0:
             self.state = RiderStatus.RIDER_FREE
 
@@ -96,8 +96,8 @@ class RiderAgent(Agent):
     def _pickup_orders(self):
         for order in self._queue[:]:
             if order.order_is_ready(self.model.t):
-                self.add_order_to_bag(order, self.model.t)
-                self.remove_order_from_queue(order)
+                self._add_order_to_bag(order, self.model.t)
+                self._remove_order_from_queue(order)
 
         if self.rider_finished_pickup():
             self.model.sort_orders_in_bag(self)  # Ordena los pedidos en la bolsa
@@ -106,7 +106,7 @@ class RiderAgent(Agent):
     def _deliver_order(self):
         if self._bag:
             order = self._bag[0]
-            self.remove_order_from_bag(order, self.model.t)
+            self._remove_order_from_bag(order, self.model.t)
 
     def _handle_reached_goal(self):
         if self.state == RiderStatus.RIDER_GOING_TO_VENDOR:

@@ -16,15 +16,15 @@ class Order:
         self.pick_up_at = None
         self.drop_off_at = None
 
-    def rider_assign(self, assigned_at):
+    def _rider_assign(self, assigned_at):
         self.assigned_at = assigned_at
 
-    def rider_pick_up(self, pick_up_at):
+    def _rider_pick_up(self, pick_up_at):
         if self.assigned_at is None:
             raise TypeError("Assignement time missing for order to pick up.")
         self.pick_up_at = pick_up_at
 
-    def rider_drop_off(self, drop_off_at):
+    def _rider_drop_off(self, drop_off_at):
         if self.assigned_at is None or self.pick_up_at is None:
             raise TypeError("Previous time steps missing for order to drop off.")
         self.drop_off_at = drop_off_at
