@@ -1,6 +1,7 @@
 import random
 
 from scripts.optim.utils import (
+    Point,
     calculate_distances_dict,
     calculate_path_len,
     initialize_route_with_logic,
@@ -9,15 +10,16 @@ from scripts.optim.utils import (
 
 
 class XOpts:
-    def __init__(self, original_route, current_position):
+    def __init__(self, original_route: list[Point], current_position: Point):
         # TODO: implement precalculated distances when cases with a lot of elements
+
+        self.original_route = original_route
         self.distances_dict = calculate_distances_dict(
             [current_position] + original_route
         )
-        self.original_route = original_route
         self.current_position = current_position
 
-    def two_opt(self, route):
+    def two_opt(self, route: list[Point]):
         """
         Has to have the current position, Restaurant as fixed.
         """

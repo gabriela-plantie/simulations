@@ -2,6 +2,8 @@ import numpy as np
 from mesa import DataCollector, Model, space, time
 
 from scripts.agents.riders import RiderStatus
+from scripts.optim.tsp import XOpts
+from scripts.optim.utils import Point
 from scripts.utils import RiderGenerator
 
 
@@ -142,7 +144,23 @@ class Dispatcher(Model):
                     break
 
     def sort_orders_in_bag(self, rider):
-        # TODO: in the TSP we need to add the original position
-        # to the list of points!
-        rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
+        """
+        Since for now this only sorts in Restaurant
+        -> Current pos is a restaurant.
+        -> Point(restaurant) -> id=9999
+        """
+        # rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
+        if len(rider._bag) > 1:
+            _, sorted_points = XOpts(
+                original_route=[
+                    Point(id=o.id, x=o.customer_address[0], y=o.customer_address[1])
+                    for o in rider._bag
+                ],
+                current_position=Point(9999, *rider.pos),  # must be a point
+            ).local_search()
+            sorted_orders = []
+            for p in sorted_points[1:]:
+                sorted_orders.extend([o for o in rider._bag if o.id == p.id])
+            rider._bag = sorted_orders
+
         rider.goal_position = rider._bag[0].customer_address
