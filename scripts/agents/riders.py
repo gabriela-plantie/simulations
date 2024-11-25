@@ -113,3 +113,10 @@ class RiderAgent(Agent):
             self._pickup_orders()
         elif self.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
             self._deliver_order()
+
+    def reorder_bag(self, ordered_bag):
+        self._rider_bag = ordered_bag
+        self.goal_position = self._bag[0].customer_address
+
+    def count_items_in_bag(self):
+        return len(self._bag)

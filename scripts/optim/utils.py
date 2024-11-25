@@ -1,5 +1,7 @@
 import numpy as np
 
+from scripts.agents.orders import Order
+
 
 class Point:
     def __init__(self, id, x, y):
@@ -20,13 +22,20 @@ def length(point1, point2):
     return abs(point1.x - point2.x) + abs(point1.y - point2.y)
 
 
-def preprocess_bag(orders):
+def orders_to_points(orders: list[Order]):
     orders_points = []
     for o in orders:
         x, y = o.customer_address
         id = o.id
         orders_points.append(Point(id, x, y))
     return orders_points
+
+
+def points_to_orders(points: list[Point], orders: list[Order]):
+    sorted_orders = []
+    for p in points:
+        sorted_orders.extend([o for o in orders if o.id == p.id])
+    return sorted_orders
 
 
 def calculate_path_len(points: list[Point], path_type: str = "open"):

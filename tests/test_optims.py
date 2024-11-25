@@ -1,3 +1,5 @@
+import random
+
 import pytest
 
 from scripts.optim.tsp import XOpts
@@ -53,6 +55,7 @@ def test_2opt_for_bag(
     - numbers represents orders and their positions are the correspondend
     customers places.
     """
+    random.seed(1)
     restaurant_point = Point(99, *restaurant)
 
     orders_in_bag = [Point(i, p[0], p[1]) for i, p in enumerate(orders_positions)]

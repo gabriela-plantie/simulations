@@ -47,8 +47,9 @@ class XOpts:
         distance, route = initialize_route_with_logic(
             distance_dict=self.distances_dict, route=[self.current_position] + route
         )
-
-        for _ in range(10):
+        new_distance = distance - 1
+        not_improving_iterations = 0
+        while (new_distance < distance) or (not_improving_iterations < 5):
             random_route = self.original_route.copy()
             random.shuffle(random_route)
             new_distance, new_route = self.two_opt(
@@ -60,7 +61,7 @@ class XOpts:
             if new_distance < distance:
                 route = new_route
                 distance = new_distance
-
+            not_improving_iterations += 1
         return distance, route
 
     # TODO:

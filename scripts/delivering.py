@@ -3,7 +3,7 @@ from mesa import DataCollector, Model, space, time
 
 from scripts.agents.riders import RiderStatus
 from scripts.optim.tsp import XOpts
-from scripts.optim.utils import Point
+from scripts.optim.utils import Point, orders_to_points, points_to_orders
 from scripts.utils import RiderGenerator
 
 
@@ -149,18 +149,23 @@ class Dispatcher(Model):
         -> Current pos is a restaurant.
         -> Point(restaurant) -> id=9999
         """
+
+        # TODO: let's say that rider time should never be above some time.
+        # and also DT < max(max_allowed_DT, prep_time + min_possible_rider_time)
+        # now in reality rider time is preety fair, the problem is prep time.
+
         # rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
-        if len(rider._bag) > 1:
+        if rider.count_items_in_bag() > 1:
             _, sorted_points = XOpts(
-                original_route=[
-                    Point(id=o.id, x=o.customer_address[0], y=o.customer_address[1])
-                    for o in rider._bag
-                ],
+                original_route=orders_to_points(orders=rider._bag),
                 current_position=Point(9999, *rider.pos),  # must be a point
             ).local_search()
-            sorted_orders = []
-            for p in sorted_points[1:]:
-                sorted_orders.extend([o for o in rider._bag if o.id == p.id])
-            rider._bag = sorted_orders
 
-        rider.goal_position = rider._bag[0].customer_address
+            rider.reorder_bag(
+                ordered_bag=points_to_orders(
+                    points=sorted_points[1:], orders=rider._bag
+                )
+            )
+
+        # TODO, stack and sort as long as max RIDER TIME is below sth
+        # and avg RIDER TIME is sth.
