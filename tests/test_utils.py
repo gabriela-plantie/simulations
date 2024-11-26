@@ -2,7 +2,7 @@ from scripts.optim.utils import (
     Point,
     calculate_distances_dict,
     calculate_path_len,
-    initialize_route_with_logic,
+    initialize_route_with_logic_from_restaurant,
 )
 from scripts.utils import OrderGenerator
 
@@ -70,6 +70,8 @@ def test_initialize_route_with_logic():
     ]
 
     distance_dict = calculate_distances_dict(points)
-    total_distance, route = initialize_route_with_logic(distance_dict, points)
+    total_distance, route = initialize_route_with_logic_from_restaurant(
+        distance_dict, points
+    )
     assert len(route) == len(points)
     assert total_distance < calculate_path_len(points)

@@ -2,7 +2,7 @@ import numpy as np
 from mesa import DataCollector, Model, space, time
 
 from scripts.agents.riders import RiderStatus
-from scripts.optim.tsp import XOpts
+from scripts.optim.tsp import LocalSearch
 from scripts.optim.utils import Point, orders_to_points, points_to_orders
 from scripts.utils import RiderGenerator
 
@@ -156,10 +156,10 @@ class Dispatcher(Model):
 
         # rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
         if rider.count_items_in_bag() > 1:
-            _, sorted_points = XOpts(
+            _, sorted_points = LocalSearch(
                 original_route=orders_to_points(orders=rider._bag),
                 current_position=Point(9999, *rider.pos),  # must be a point
-            ).local_search()
+            ).search()
 
             rider.reorder_bag(
                 ordered_bag=points_to_orders(

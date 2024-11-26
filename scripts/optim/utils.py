@@ -71,13 +71,17 @@ def calculate_distances_dict(points: list[Point]):
     return distances_dict
 
 
-def initialize_route_with_logic(distance_dict, route):
+def initialize_route_with_logic_from_restaurant(
+    distance_dict: dict, route_with_restaurant: list[Point]
+):
     """
     Nearest neighbor algorithm to set up coherent path.
+    Since for sorting the bag I have to start from the restaurant,
+    I am fixing the first position there.
     """
-    unvisited = route.copy()
-    current_position = route[0]
-    route = [current_position]
+    unvisited = route_with_restaurant.copy()
+    current_position = route_with_restaurant[0]
+    route_with_restaurant = [current_position]
     unvisited.remove(current_position)
     total_d = 0  # total distance
 
@@ -94,13 +98,16 @@ def initialize_route_with_logic(distance_dict, route):
 
         total_d += min_distance  # update total distance
         current_position = next_point  # move to next city
-        route += [current_position]  # add city to tour
+        route_with_restaurant += [current_position]  # add city to tour
         unvisited.remove(current_position)  # mark visited
 
     # # Distance to return
     # [min_point_num, max_point_num] = sorted([route[0], route[len(route) - 1]])
     # total_d += distance_dict[min_point_num][max_point_num]
-    return total_d, route  # tour distance is [0], since number of cities varies
+    return (
+        total_d,
+        route_with_restaurant,
+    )  # tour distance is [0], since number of cities varies
 
 
 def two_swap(route: list[Point], i: int, j: int):

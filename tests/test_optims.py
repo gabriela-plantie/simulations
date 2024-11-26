@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from scripts.optim.tsp import XOpts
+from scripts.optim.tsp import LocalSearch
 from scripts.optim.utils import Point, calculate_path_len, two_swap
 
 
@@ -62,9 +62,9 @@ def test_2opt_for_bag(
 
     distance = calculate_path_len([restaurant_point] + orders_in_bag)
     # calculate_distances_dict([restaurant_point] + orders_in_bag)
-    new_distance, new_route = XOpts(
+    new_distance, new_route = LocalSearch(
         current_position=restaurant_point, original_route=orders_in_bag
-    ).local_search()
+    ).search()
     assert new_distance < distance
     assert new_distance == expected_distance
     assert [o.id for o in new_route][1:] == expected_route_ids
