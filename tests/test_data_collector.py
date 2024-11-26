@@ -42,18 +42,25 @@ def test_collector_no_stacking():
 
     assert all(
         [
-            (
-                dispatcher.datacollector.model_vars["riders_before_shift"][t]
-                + dispatcher.datacollector.model_vars["riders_free"][t]
-                + dispatcher.datacollector.model_vars["riders_going_to_vendor"][t]
-                + dispatcher.datacollector.model_vars["riders_going_to_customer"][t]
-                + dispatcher.datacollector.model_vars["riders_unavailable"][t]
-            )
-            == num_riders
+            dispatcher.datacollector.model_vars["orders_waiting_cum"][t] == 0
+            or dispatcher.datacollector.model_vars["riders_idle"][t] == 0
             for t in range(max_t)
         ]
-    ), "in all steps total riders must be the same"
-    # TODO: change when incorporate rider start rider end
+    )
+    # assert all(
+    #     [
+    #         (
+    #             dispatcher.datacollector.model_vars["riders_before_shift"][t]
+    #             + dispatcher.datacollector.model_vars["riders_idle"][t]
+    #             + dispatcher.datacollector.model_vars["riders_going_to_vendor"][t]
+    #             + dispatcher.datacollector.model_vars["riders_going_to_customer"][t]
+    #             + dispatcher.datacollector.model_vars["riders_unavailable"][t]
+    #         )
+    #         == num_riders
+    #         for t in range(max_t)
+    #     ]
+    # ), "in all steps total riders must be the same"
+    # # TODO: change when incorporate rider start rider end
 
     assert (
         max(

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from scripts.agents.orders import Order
-from scripts.agents.riders import Rider, RiderStatus
+from scripts.agents.riders import Rider
 from scripts.delivering import Dispatcher
 from scripts.utils import OrderGenerator
 
@@ -39,10 +39,7 @@ def test_always_assigned_when_free_riders():
         for o in dispatcher.orders
     ]
 
-    riders_free = [
-        (r.state == RiderStatus.RIDER_FREE) and (r.shift_start_at <= dispatcher.t)
-        for r in dispatcher.riders
-    ]
+    riders_free = [r.rider_is_idle(dispatcher.t) for r in dispatcher.riders]
 
     assert not (any(orders_created_unassigned) and any(riders_free))
 
@@ -79,12 +76,12 @@ def test_states():
     assert (
         len(dispatcher.riders[0]._queue) == 1
     ), "the rider should have an order assigned"
-    assert (
-        dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR
-    ), "the state should be going to vendor"
+    assert dispatcher.riders[
+        0
+    ].rider_is_going_to_vendor(), "the state should be going to vendor"
 
     # check status change from going to vendor to going to customer
-    while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR:
+    while dispatcher.riders[0].rider_is_going_to_vendor():
         dispatcher.step()
     assert (
         len(dispatcher.riders[0]._queue) == 0
@@ -94,7 +91,7 @@ def test_states():
     assert (
         len(dispatcher.riders[0]._bag) >= 1
     ), "when restarurant is reached, bag should have the orders"
-    while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
+    while dispatcher.riders[0].rider_is_going_to_customer():
         dispatcher.step()
     assert len(dispatcher.riders[0]._bag) == 0
 
@@ -127,11 +124,11 @@ def test_orders_times_steps():
         None,
     }
 
-    while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_VENDOR:
+    while dispatcher.riders[0].rider_is_going_to_vendor():
         dispatcher.step()
     assert any([o.pick_up_at is not None for o in dispatcher.orders])
 
-    while dispatcher.riders[0].state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
+    while dispatcher.riders[0].rider_is_going_to_customer():
         dispatcher.step()
     assert any([o.drop_off_at is not None for o in dispatcher.orders])
 
@@ -261,6 +258,9 @@ def test_pickup_after_prep_time_passed_2orders(
 ):
     sp = (1, 1)
     rider = [Rider(id=1, shift_start_at=0, shift_end_at=4, starting_point=sp)]
+
+    # 2 orders created at same moment, same restaurant, same customer
+    # the only diff is the prep time
     order = [
         Order(
             id=0,

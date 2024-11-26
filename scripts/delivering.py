@@ -1,7 +1,6 @@
 import numpy as np
 from mesa import DataCollector, Model, space, time
 
-from scripts.agents.riders import RiderStatus
 from scripts.optim.tsp import LocalSearch
 from scripts.optim.utils import Point, orders_to_points, points_to_orders
 from scripts.utils import RiderGenerator
@@ -22,28 +21,21 @@ class Dispatcher(Model):
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
             # agent_reporters={"State": "state"}
             {
-                "riders_before_shift": lambda m: sum(
-                    [
-                        (r.state == RiderStatus.RIDER_FREE)
-                        and (r.shift_start_at > self.t)
-                        for r in m.riders
-                    ]
-                ),
-                "riders_free": lambda m: sum(
-                    [
-                        (r.state == RiderStatus.RIDER_FREE)
-                        and (r.shift_start_at <= self.t)
-                        for r in m.riders
-                    ]
+                "riders_idle": lambda m: sum(
+                    [r.rider_is_idle(self.t) for r in m.riders]
                 ),
                 "riders_going_to_vendor": lambda m: sum(
-                    [r.state == RiderStatus.RIDER_GOING_TO_VENDOR for r in m.riders]
+                    [r.rider_is_going_to_vendor() for r in m.riders]
                 ),
                 "riders_going_to_customer": lambda m: sum(
-                    [r.state == RiderStatus.RIDER_GOING_TO_CUSTOMER for r in m.riders]
+                    [r.rider_is_going_to_customer() for r in m.riders]
                 ),
-                "riders_unavailable": lambda m: sum(
-                    [r.state == RiderStatus.RIDER_UNAVAILABLE for r in m.riders]
+                "riders_doing_overtime": lambda m: sum(
+                    [
+                        (r.rider_is_going_to_customer() or r.rider_is_going_to_vendor())
+                        and not r.rider_shift_within_time_limits(m.t)
+                        for r in m.riders
+                    ]
                 ),
                 "orders_delivered_cum": lambda m: sum(
                     [o.drop_off_at is not None for o in m.orders]
@@ -52,22 +44,19 @@ class Dispatcher(Model):
                     [o.drop_off_at == self.t for o in m.orders]
                 ),
                 "orders_created": lambda m: sum(
-                    [(o.creation_at == self.t) for o in m.orders]
+                    [(o.creation_at == m.t) for o in m.orders]
                 ),
                 "orders_waiting_cum": lambda m: sum(
-                    [
-                        (o.assigned_at is None and o.creation_at <= self.t)
-                        for o in m.orders
-                    ]
+                    [(o.assigned_at is None and o.creation_at <= m.t) for o in m.orders]
                 ),
                 "delivery_time_cum": lambda m: np.mean(
                     [
                         (o.drop_off_at - o.creation_at)
                         for o in m.orders
                         if (
-                            (o.creation_at <= self.t)
+                            (o.creation_at <= m.t)
                             and (o.drop_off_at is not None)
-                            and (o.drop_off_at >= self.t)
+                            and (o.drop_off_at >= m.t)
                         )
                     ]
                 ),
@@ -111,10 +100,8 @@ class Dispatcher(Model):
             return
         self.sub_t = self.sub_t % self.slowness
 
-        # self.agents.do("step")
         self.get_orders_to_assign()
         self.assign_orders()
-
         self.agents.do("step")
 
         self.schedule.step()
@@ -144,7 +131,7 @@ class Dispatcher(Model):
     def get_available_riders(self):
         return list(
             self.agents.select(
-                lambda a: a.rider_is_free(t=self.t)
+                lambda a: a.rider_is_idle(t=self.t)
                 or a.rider_has_capacity_in_bag(bag_limit=self.bag_limit)
             )
         )
@@ -160,7 +147,7 @@ class Dispatcher(Model):
             for rider in available_riders[:]:
                 if rider.rider_is_going_to_this_vendor(
                     order
-                ) and rider.rider_has_capacity_in_bag(self.bag_limit):
+                ) and rider.rider_can_accept_orders(bag_limit=self.bag_limit, t=self.t):
                     rider._add_order_to_queue(order=order, t=self.t)
                     self.orders_to_assign.remove(order)
 
@@ -172,7 +159,7 @@ class Dispatcher(Model):
             # if it cannot not then it adds it to the free riders
             if order in self.orders_to_assign[:]:
                 for rider in list(
-                    self.agents.select(lambda a: a.rider_is_free(self.t))
+                    self.agents.select(lambda a: a.rider_is_idle(self.t))
                 ):
                     rider._add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
