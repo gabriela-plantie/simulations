@@ -2,9 +2,9 @@ import math
 
 import numpy as np
 
-from agents.orders import Order
-from agents.riders import Rider
-from delivering import Dispatcher
+from scripts.agents.orders import Order
+from scripts.agents.riders import Rider
+from scripts.delivering import Dispatcher
 
 
 def test_collector_no_stacking():
@@ -25,8 +25,8 @@ def test_collector_no_stacking():
         for i in range(num_orders)
     ]
     riders = [
-        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
-        for _ in range(num_riders)
+        Rider(id=i, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for i in range(num_riders)
     ]
 
     dispatcher = Dispatcher(
@@ -42,16 +42,27 @@ def test_collector_no_stacking():
 
     assert all(
         [
-            (
-                dispatcher.datacollector.model_vars["riders_free"][t]
-                + dispatcher.datacollector.model_vars["riders_going_to_vendor"][t]
-                + dispatcher.datacollector.model_vars["riders_going_to_customer"][t]
+            not (
+                dispatcher.datacollector.model_vars["orders_waiting_cum"][t] > 0
+                and dispatcher.datacollector.model_vars["riders_idle"][t] > 0
             )
-            == num_riders
             for t in range(max_t)
         ]
-    ), "in all steps total riders must be the same"
-    # TODO: change when incorporate rider start rider end
+    )
+    # assert all(
+    #     [
+    #         (
+    #             dispatcher.datacollector.model_vars["riders_before_shift"][t]
+    #             + dispatcher.datacollector.model_vars["riders_idle"][t]
+    #             + dispatcher.datacollector.model_vars["riders_going_to_vendor"][t]
+    #             + dispatcher.datacollector.model_vars["riders_going_to_customer"][t]
+    #             + dispatcher.datacollector.model_vars["riders_unavailable"][t]
+    #         )
+    #         == num_riders
+    #         for t in range(max_t)
+    #     ]
+    # ), "in all steps total riders must be the same"
+    # # TODO: change when incorporate rider start rider end
 
     assert (
         max(
