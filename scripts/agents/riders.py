@@ -4,6 +4,7 @@ from mesa import Agent
 
 
 class RiderStatus(str, Enum):
+    RIDER_UNAVAILABLE = "rider is unavailable"
     RIDER_FREE = "rider is free"
     RIDER_GOING_TO_VENDOR = "rider is going to vendor"
     RIDER_GOING_TO_CUSTOMER = "rider is going to customer with the order"
@@ -71,6 +72,14 @@ class RiderAgent(Agent):
         self.model.grid.move_agent(agent=self, pos=actual_position)
 
     def step(self):
+
+        if (
+            (self.shift_end_at <= self.model.t)
+            and (self.count_items_in_bag() == 0)
+            and (self.count_items_in_queue() == 0)
+        ):
+            self.state = RiderStatus.RIDER_UNAVAILABLE
+
         if self._goal_position is None:
             return
         if self.rider_reached_goal_position():
@@ -82,7 +91,8 @@ class RiderAgent(Agent):
         return (len(self._queue) == 0) and (len(self._bag) > 0)
 
     def rider_has_capacity_in_bag(self, bag_limit):
-        return len(self._queue) + len(self._bag) < bag_limit
+        has_capacity = len(self._queue) + len(self._bag) < bag_limit
+        return has_capacity and (self.state != RiderStatus.RIDER_UNAVAILABLE)
 
     def rider_is_going_to_this_vendor(self, order):
         return self._goal_position == order.restaurant_address
@@ -120,3 +130,6 @@ class RiderAgent(Agent):
 
     def count_items_in_bag(self):
         return len(self._bag)
+
+    def count_items_in_queue(self):
+        return len(self._queue)

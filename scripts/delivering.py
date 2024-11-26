@@ -22,8 +22,19 @@ class Dispatcher(Model):
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
             # agent_reporters={"State": "state"}
             {
+                "riders_before_shift": lambda m: sum(
+                    [
+                        (r.state == RiderStatus.RIDER_FREE)
+                        and (r.shift_start_at > self.t)
+                        for r in m.riders
+                    ]
+                ),
                 "riders_free": lambda m: sum(
-                    [r.state == RiderStatus.RIDER_FREE for r in m.riders]
+                    [
+                        (r.state == RiderStatus.RIDER_FREE)
+                        and (r.shift_start_at <= self.t)
+                        for r in m.riders
+                    ]
                 ),
                 "riders_going_to_vendor": lambda m: sum(
                     [r.state == RiderStatus.RIDER_GOING_TO_VENDOR for r in m.riders]
@@ -31,11 +42,34 @@ class Dispatcher(Model):
                 "riders_going_to_customer": lambda m: sum(
                     [r.state == RiderStatus.RIDER_GOING_TO_CUSTOMER for r in m.riders]
                 ),
-                "orders_delivered": lambda m: sum(
+                "riders_unavailable": lambda m: sum(
+                    [r.state == RiderStatus.RIDER_UNAVAILABLE for r in m.riders]
+                ),
+                "orders_delivered_cum": lambda m: sum(
                     [o.drop_off_at is not None for o in m.orders]
                 ),
-                "orders_waiting": lambda m: sum(
-                    [(o.assigned_at is None) for o in m.orders]
+                "orders_delivered": lambda m: sum(
+                    [o.drop_off_at == self.t for o in m.orders]
+                ),
+                "orders_created": lambda m: sum(
+                    [(o.creation_at == self.t) for o in m.orders]
+                ),
+                "orders_waiting_cum": lambda m: sum(
+                    [
+                        (o.assigned_at is None and o.creation_at <= self.t)
+                        for o in m.orders
+                    ]
+                ),
+                "delivery_time_cum": lambda m: np.mean(
+                    [
+                        (o.drop_off_at - o.creation_at)
+                        for o in m.orders
+                        if (
+                            (o.creation_at <= self.t)
+                            and (o.drop_off_at is not None)
+                            and (o.drop_off_at >= self.t)
+                        )
+                    ]
                 ),
                 "delivery_time": lambda m: np.mean(
                     [
@@ -77,6 +111,7 @@ class Dispatcher(Model):
             return
         self.sub_t = self.sub_t % self.slowness
 
+        # self.agents.do("step")
         self.get_orders_to_assign()
         self.assign_orders()
 
@@ -90,9 +125,9 @@ class Dispatcher(Model):
             return
 
     def get_orders_to_assign(self):
-        orders_to_assign = self.get_orders_assigned()
+        orders_assigned = self.get_orders_assigned()
         # filter orders in state assigned from orders to assign
-        for o in orders_to_assign[:]:  # move to rider.add_order_to_queue
+        for o in orders_assigned[:]:  # move to rider.add_order_to_queue
             # TODO add a test for the copy -> assign many orders while rider going.
             if o in self.orders_to_assign[:]:
                 self.orders_to_assign.remove(o)

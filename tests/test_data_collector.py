@@ -43,9 +43,11 @@ def test_collector_no_stacking():
     assert all(
         [
             (
-                dispatcher.datacollector.model_vars["riders_free"][t]
+                dispatcher.datacollector.model_vars["riders_before_shift"][t]
+                + dispatcher.datacollector.model_vars["riders_free"][t]
                 + dispatcher.datacollector.model_vars["riders_going_to_vendor"][t]
                 + dispatcher.datacollector.model_vars["riders_going_to_customer"][t]
+                + dispatcher.datacollector.model_vars["riders_unavailable"][t]
             )
             == num_riders
             for t in range(max_t)

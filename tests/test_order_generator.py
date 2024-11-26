@@ -12,19 +12,19 @@ def test_always_assigned_when_free_riders():
     # assert not riders free and orders not assigned
 
     num_riders = 5
-    max_t = 5
+    max_t = 10
     num_orders = 4
     orders = [
         Order(
             id=i,
-            creation_at=0,
+            creation_at=i,
             restaurant_address=(i, i),
             customer_address=(i + 1, i + 1),
         )
         for i in range(num_orders)
     ]
     riders = [
-        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        Rider(id=1, shift_start_at=0, shift_end_at=10, starting_point=(0, 0))
         for _ in range(num_riders)
     ]
 
@@ -34,10 +34,17 @@ def test_always_assigned_when_free_riders():
     assert len(dispatcher.riders) == num_riders
     dispatcher.step()
 
-    assert not (
-        any([o.assigned_at is None for o in dispatcher.orders])
-        and any([r.state == RiderStatus.RIDER_FREE for r in dispatcher.riders])
-    )
+    orders_created_unassigned = [
+        (o.assigned_at is None) and (o.creation_at <= dispatcher.t)
+        for o in dispatcher.orders
+    ]
+
+    riders_free = [
+        (r.state == RiderStatus.RIDER_FREE) and (r.shift_start_at <= dispatcher.t)
+        for r in dispatcher.riders
+    ]
+
+    assert not (any(orders_created_unassigned) and any(riders_free))
 
 
 def test_states():
@@ -181,7 +188,7 @@ def test_assignement_within_shift(creation_at, shift_start_at, expected_assigned
 
     rider = [
         Rider(
-            id=1, shift_start_at=shift_start_at, shift_end_at=4, starting_point=(1, 1)
+            id=1, shift_start_at=shift_start_at, shift_end_at=10, starting_point=(1, 1)
         )
     ]
     order = [
@@ -235,7 +242,7 @@ def test_pickup_after_prep_time_passed(
         orders=order,
         riders=rider,
     )
-    for _ in range(expected_pick_up_at + 1):
+    for _ in range(expected_pick_up_at + 2):
         dispatcher.step()
     assert dispatcher.orders[0].pick_up_at == expected_pick_up_at
 
