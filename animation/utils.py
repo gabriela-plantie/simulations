@@ -8,7 +8,7 @@ def agent_portrayal(agent):
     color = "w"
     rider_size = 50
 
-    if agent.rider_is_idle():
+    if agent.rider_is_idle(agent.model.t):
         size = rider_size
         color = "tab:green"
     if agent.rider_is_going_to_vendor():

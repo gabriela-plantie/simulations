@@ -40,11 +40,14 @@ class Dispatcher(Model):
                 "orders_delivered_cum": lambda m: sum(
                     [o.drop_off_at is not None for o in m.orders]
                 ),
-                "orders_delivered": lambda m: sum(
-                    [o.drop_off_at == self.t for o in m.orders]
-                ),
                 "orders_created": lambda m: sum(
                     [(o.creation_at == m.t) for o in m.orders]
+                ),
+                "orders_assigned": lambda m: sum(
+                    [(o.assigned_at == m.t) for o in m.orders]
+                ),
+                "orders_delivered": lambda m: sum(
+                    [o.drop_off_at == self.t for o in m.orders]
                 ),
                 "orders_waiting_cum": lambda m: sum(
                     [(o.assigned_at is None and o.creation_at <= m.t) for o in m.orders]
@@ -74,10 +77,10 @@ class Dispatcher(Model):
                 "bag_size": lambda m: np.mean(
                     [len(r._bag) for r in m.riders if len(r._bag) > 0]
                 ),
-                "orders_assigned": lambda m: sum(
+                "orders_assigned_cum": lambda m: sum(
                     [o.assigned_at is not None for o in m.orders]
                 ),
-                "orders_picked_up": lambda m: sum(
+                "orders_picked_up_cum": lambda m: sum(
                     [o.pick_up_at is not None for o in m.orders]
                 ),
             }
