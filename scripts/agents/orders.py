@@ -15,6 +15,7 @@ class Order:
         self.assigned_at = None
         self.pick_up_at = None
         self.drop_off_at = None
+        self.delivered_by = None
 
     def _rider_assign(self, assigned_at):
         self.assigned_at = assigned_at
@@ -24,10 +25,11 @@ class Order:
             raise TypeError("Assignement time missing for order to pick up.")
         self.pick_up_at = pick_up_at
 
-    def _rider_drop_off(self, drop_off_at):
+    def _rider_drop_off(self, t, rider_id):
         if self.assigned_at is None or self.pick_up_at is None:
             raise TypeError("Previous time steps missing for order to drop off.")
-        self.drop_off_at = drop_off_at
+        self.drop_off_at = t
+        self.delivered_by = rider_id
 
     def order_is_ready(self, t):
         return self.creation_at + self.preparation_time <= t

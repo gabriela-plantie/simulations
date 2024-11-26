@@ -95,7 +95,6 @@ class Dispatcher(Model):
 
     def step(self):
         self.t += 1
-        self.datacollector.collect(self)
         self.sub_t += 1
         if self.sub_t < self.slowness:
             return
@@ -106,6 +105,7 @@ class Dispatcher(Model):
         self.agents.do("step")
 
         self.schedule.step()
+        self.datacollector.collect(self)
 
         if self.t > self.max_t:  # FIXME: t should
             print("Max simulation steps reached!")

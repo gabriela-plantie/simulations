@@ -12,6 +12,7 @@ class Rider:
 class RiderAgent(Agent):
     def __init__(self, id, model, shift_start_at, shift_end_at, starting_point):
         super().__init__(model=model)
+        self.id = id
         self.shift_start_at = shift_start_at
         self.shift_end_at = shift_end_at
         self.starting_point = starting_point
@@ -41,7 +42,7 @@ class RiderAgent(Agent):
         self._bag.remove(order)
         if len(self._bag) > 0:
             self._goal_position = self._bag[0].customer_address
-        order._rider_drop_off(t)
+        order._rider_drop_off(t=t, rider_id=self.id)
 
     def move(self):
         x, y = self.pos
@@ -110,7 +111,15 @@ class RiderAgent(Agent):
             self.rider_shift_within_time_limits(t)
             and not self.rider_has_queue()
             and not self.rider_has_bag()
+            # en data collector que corre despues de rider step,
+            # tira q un rider esta idle pero ya entrego su orden!!!
+            and not self.rider_delivered_at_this_time(t)
         )
+
+    def rider_delivered_at_this_time(self, t):
+        return self.id in [
+            o.delivered_by for o in self.model.orders if o.drop_off_at == t
+        ]
 
     def rider_can_accept_orders(self, bag_limit, t):
         return (
