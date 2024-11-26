@@ -121,7 +121,7 @@ class RiderAgent(Agent):
         )
 
     def rider_finished_pickup(self):
-        return self.rider_has_bag() and not self.rider_has_queue
+        return self.rider_has_bag() and not self.rider_has_queue()
 
     def rider_has_capacity_in_bag(self, bag_limit):
         return self.count_items_in_queue() + self.count_items_in_bag() < bag_limit

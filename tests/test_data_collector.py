@@ -42,8 +42,10 @@ def test_collector_no_stacking():
 
     assert all(
         [
-            dispatcher.datacollector.model_vars["orders_waiting_cum"][t] == 0
-            or dispatcher.datacollector.model_vars["riders_idle"][t] == 0
+            not (
+                dispatcher.datacollector.model_vars["orders_waiting_cum"][t] > 0
+                and dispatcher.datacollector.model_vars["riders_idle"][t] > 0
+            )
             for t in range(max_t)
         ]
     )

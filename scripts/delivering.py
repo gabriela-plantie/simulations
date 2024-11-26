@@ -84,7 +84,7 @@ class Dispatcher(Model):
         )
         self.bag_limit = bag_limit
         self.max_t = max_t
-        self.t: int = 0
+        self.t: int = -1
         self.grid = space.MultiGrid(width=dim, height=dim, torus=True)
         self.schedule = time.RandomActivation(self)
         self.orders = orders
@@ -94,6 +94,7 @@ class Dispatcher(Model):
         self.sub_t = 0
 
     def step(self):
+        self.t += 1
         self.datacollector.collect(self)
         self.sub_t += 1
         if self.sub_t < self.slowness:
@@ -106,7 +107,6 @@ class Dispatcher(Model):
 
         self.schedule.step()
 
-        self.t += 1
         if self.t > self.max_t:  # FIXME: t should
             print("Max simulation steps reached!")
             return

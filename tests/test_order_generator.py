@@ -20,6 +20,7 @@ def test_always_assigned_when_free_riders():
             creation_at=i,
             restaurant_address=(i, i),
             customer_address=(i + 1, i + 1),
+            preparation_time=0,
         )
         for i in range(num_orders)
     ]
