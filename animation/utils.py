@@ -1,8 +1,7 @@
+import matplotlib.pyplot as plt
 import solara
 from matplotlib.figure import Figure
 from mesa.visualization.utils import update_counter
-
-from agents.riders import RiderStatus
 
 
 def agent_portrayal(agent):
@@ -10,13 +9,13 @@ def agent_portrayal(agent):
     color = "w"
     rider_size = 50
 
-    if agent.state == RiderStatus.RIDER_FREE:
+    if agent.rider_is_idle(agent.model.t):
         size = rider_size
         color = "tab:green"
-    if agent.state == RiderStatus.RIDER_GOING_TO_VENDOR:
+    if agent.rider_is_going_to_vendor():
         size = rider_size
         color = "tab:cyan"
-    if agent.state == RiderStatus.RIDER_GOING_TO_CUSTOMER:
+    if agent.rider_is_going_to_customer():
         size = rider_size
         color = "tab:blue"
 
@@ -30,8 +29,24 @@ def Graph(model):
     # plt.figure(), for thread safety purpose
     fig = Figure()
     ax = fig.subplots()
-    riders_free = sum([r.state == RiderStatus.RIDER_FREE for r in model.riders])
+    riders_free = sum([r.rider_is_idle() for r in model.riders])
     # Note: you have to use Matplotlib's OOP API instead of plt.hist
     # because plt.hist is not thread-safe.
     ax.plot([model.t], [riders_free])
     solara.FigureMatplotlib(fig)
+
+
+def plot_lines(df, cols):
+    fig, ax1 = plt.subplots()
+
+    for c in cols[0]:
+        ax1.plot(df[c], label=c)
+    ax1.tick_params("y", colors="blue")
+    ax1.legend(loc="upper left")
+    ax2 = ax1.twinx()
+    for c in cols[1]:
+        ax2.plot(df[c], label=c, linestyle="--")
+    ax2.tick_params("y", colors="red")
+    ax2.legend(loc="upper right")
+
+    plt.show()

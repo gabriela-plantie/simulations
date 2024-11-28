@@ -1,7 +1,7 @@
 import numpy as np
 
-from agents.orders import Order
-from agents.riders import RiderAgent
+from scripts.agents.orders import Order
+from scripts.agents.riders import RiderAgent
 
 
 class RiderGenerator:

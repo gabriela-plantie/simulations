@@ -1,8 +1,9 @@
 import numpy as np
 from mesa import DataCollector, Model, space, time
 
-from agents.riders import RiderStatus
-from utils import RiderGenerator
+from scripts.optim.tsp import LocalSearch
+from scripts.optim.utils import Point, orders_to_points, points_to_orders
+from scripts.utils import RiderGenerator
 
 
 class Dispatcher(Model):
@@ -20,20 +21,47 @@ class Dispatcher(Model):
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
             # agent_reporters={"State": "state"}
             {
-                "riders_free": lambda m: sum(
-                    [r.state == RiderStatus.RIDER_FREE for r in m.riders]
+                "riders_in_shift": lambda m: sum(
+                    [r.rider_shift_within_time_limits(self.t) for r in m.riders]
+                ),
+                "riders_idle": lambda m: sum(
+                    [r.rider_is_idle(self.t) for r in m.riders]
                 ),
                 "riders_going_to_vendor": lambda m: sum(
-                    [r.state == RiderStatus.RIDER_GOING_TO_VENDOR for r in m.riders]
+                    [r.rider_is_going_to_vendor() for r in m.riders]
                 ),
                 "riders_going_to_customer": lambda m: sum(
-                    [r.state == RiderStatus.RIDER_GOING_TO_CUSTOMER for r in m.riders]
+                    [r.rider_is_going_to_customer() for r in m.riders]
+                ),
+                "riders_doing_overtime": lambda m: sum(
+                    [
+                        (r.rider_is_going_to_customer() or r.rider_is_going_to_vendor())
+                        and not r.rider_shift_within_time_limits(m.t)
+                        for r in m.riders
+                    ]
+                ),
+                "orders_created": lambda m: sum(
+                    [(o.creation_at == m.t) for o in m.orders]
+                ),
+                "orders_assigned": lambda m: sum(
+                    [(o.assigned_at == m.t) for o in m.orders]
                 ),
                 "orders_delivered": lambda m: sum(
-                    [o.drop_off_at is not None for o in m.orders]
+                    [o.drop_off_at == self.t for o in m.orders]
                 ),
                 "orders_waiting": lambda m: sum(
-                    [(o.assigned_at is None) for o in m.orders]
+                    [(o.assigned_at is None and o.creation_at <= m.t) for o in m.orders]
+                ),
+                "delivery_time_cum": lambda m: np.mean(
+                    [
+                        (o.drop_off_at - o.creation_at)
+                        for o in m.orders
+                        if (
+                            (o.creation_at <= m.t)
+                            and (o.drop_off_at is not None)
+                            and (o.drop_off_at >= m.t)
+                        )
+                    ]
                 ),
                 "delivery_time": lambda m: np.mean(
                     [
@@ -49,17 +77,20 @@ class Dispatcher(Model):
                 "bag_size": lambda m: np.mean(
                     [len(r._bag) for r in m.riders if len(r._bag) > 0]
                 ),
-                "orders_assigned": lambda m: sum(
+                "orders_assigned_cum": lambda m: sum(
                     [o.assigned_at is not None for o in m.orders]
                 ),
-                "orders_picked_up": lambda m: sum(
+                "orders_picked_up_cum": lambda m: sum(
                     [o.pick_up_at is not None for o in m.orders]
+                ),
+                "orders_delivered_cum": lambda m: sum(
+                    [o.drop_off_at is not None for o in m.orders]
                 ),
             }
         )
         self.bag_limit = bag_limit
         self.max_t = max_t
-        self.t: int = 0
+        self.t: int = -1
         self.grid = space.MultiGrid(width=dim, height=dim, torus=True)
         self.schedule = time.RandomActivation(self)
         self.orders = orders
@@ -69,7 +100,7 @@ class Dispatcher(Model):
         self.sub_t = 0
 
     def step(self):
-        self.datacollector.collect(self)
+        self.t += 1
         self.sub_t += 1
         if self.sub_t < self.slowness:
             return
@@ -77,20 +108,19 @@ class Dispatcher(Model):
 
         self.get_orders_to_assign()
         self.assign_orders()
-
         self.agents.do("step")
 
         self.schedule.step()
+        self.datacollector.collect(self)
 
-        self.t += 1
         if self.t > self.max_t:  # FIXME: t should
             print("Max simulation steps reached!")
             return
 
     def get_orders_to_assign(self):
-        orders_to_assign = self.get_orders_assigned()
+        orders_assigned = self.get_orders_assigned()
         # filter orders in state assigned from orders to assign
-        for o in orders_to_assign[:]:  # move to rider.add_order_to_queue
+        for o in orders_assigned[:]:  # move to rider.add_order_to_queue
             # TODO add a test for the copy -> assign many orders while rider going.
             if o in self.orders_to_assign[:]:
                 self.orders_to_assign.remove(o)
@@ -105,23 +135,10 @@ class Dispatcher(Model):
         return [o for o in self.orders if o.creation_at == self.t]
 
     def get_available_riders(self):
-        """
-        Get available riders:
-            - riders that are free or
-            - riders that are going to the vendor and have space in the queue
-        """
         return list(
             self.agents.select(
-                lambda a: (
-                    (a.shift_start_at <= self.t)
-                    and (
-                        (a.state == RiderStatus.RIDER_FREE)
-                        or (
-                            (a.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                            and (len(a._queue) + len(a._bag) < self.bag_limit)
-                        )
-                    )
-                )
+                lambda a: a.rider_is_idle(t=self.t)
+                or a.rider_has_capacity_in_bag(bag_limit=self.bag_limit)
             )
         )
 
@@ -134,34 +151,49 @@ class Dispatcher(Model):
             # first tries to add the order
             # to a rider that is already going to the vendor
             for rider in available_riders[:]:
-                if (
-                    (rider.state == RiderStatus.RIDER_GOING_TO_VENDOR)
-                    and (len(rider._queue) + len(rider._bag) < self.bag_limit)
-                    and (rider._goal_position == order.restaurant_address)
-                ):
-                    rider.add_order_to_queue(order=order, t=self.t)
+                if rider.rider_is_going_to_this_vendor(
+                    order
+                ) and rider.rider_can_accept_orders(bag_limit=self.bag_limit, t=self.t):
+                    rider._add_order_to_queue(order=order, t=self.t)
                     self.orders_to_assign.remove(order)
 
-                    if (
-                        len(rider._queue) + len(rider._bag) == self.bag_limit
-                    ):  # CHECK tiene sentido?
+                    if not rider.rider_has_capacity_in_bag(self.bag_limit):
+                        # CHECK tiene sentido?
                         available_riders.remove(rider)
                     break
 
             # if it cannot not then it adds it to the free riders
             if order in self.orders_to_assign[:]:
                 for rider in list(
-                    self.agents.select(
-                        lambda a: (
-                            (a.shift_start_at <= self.t)
-                            and (a.state == RiderStatus.RIDER_FREE)
-                        )
-                    )
+                    self.agents.select(lambda a: a.rider_is_idle(self.t))
                 ):
-                    rider.add_order_to_queue(order, self.t)
+                    rider._add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
                     break
 
     def sort_orders_in_bag(self, rider):
-        rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
-        rider.goal_position = rider._bag[0].customer_address
+        """
+        Since for now this only sorts in Restaurant
+        -> Current pos is a restaurant.
+        -> Point(restaurant) -> id=9999
+        """
+
+        # TODO: let's say that rider time should never be above some time.
+        # and also DT < max(max_allowed_DT, prep_time + min_possible_rider_time)
+        # now in reality rider time is preety fair, the problem is prep time.
+
+        # rider._bag = sorted(rider._bag, key=lambda o: o.creation_at)
+        if rider.count_items_in_bag() > 1:
+            _, sorted_points = LocalSearch(
+                original_route=orders_to_points(orders=rider._bag),
+                current_position=Point(9999, *rider.pos),  # must be a point
+            ).search()
+
+            rider.reorder_bag(
+                ordered_bag=points_to_orders(
+                    points=sorted_points[1:], orders=rider._bag
+                )
+            )
+
+        # TODO, stack and sort as long as max RIDER TIME is below sth
+        # and avg RIDER TIME is sth.
