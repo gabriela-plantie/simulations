@@ -52,7 +52,7 @@ class Dispatcher(Model):
                 "orders_waiting": lambda m: sum(
                     [(o.assigned_at is None and o.creation_at <= m.t) for o in m.orders]
                 ),
-                "delivery_time_cum": lambda m: np.mean(
+                "delivery_time": lambda m: np.mean(
                     [
                         (o.drop_off_at - o.creation_at)
                         for o in m.orders
@@ -63,7 +63,7 @@ class Dispatcher(Model):
                         )
                     ]
                 ),
-                "delivery_time": lambda m: np.mean(
+                "delivery_time_cum": lambda m: np.mean(
                     [
                         (o.drop_off_at - o.creation_at)
                         for o in m.orders
