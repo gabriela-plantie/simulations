@@ -289,3 +289,49 @@ def test_pickup_after_prep_time_passed_2orders(
         dispatcher.step()
     assert dispatcher.orders[0].pick_up_at == max(distance_to_vendor, preparation_time1)
     assert dispatcher.orders[1].pick_up_at == expected_pick_up_at2
+
+
+def test_goal_position():
+    sp = (1, 1)
+    restaurant_address = (2, 1)
+    customer_address = (3, 1)
+
+    rider = [Rider(id=1, shift_start_at=0, shift_end_at=4, starting_point=sp)]
+
+    # 2 orders created at same moment, same restaurant, same customer
+    # the only diff is the prep time
+    order = [
+        Order(
+            id=0,
+            creation_at=0,
+            restaurant_address=restaurant_address,
+            customer_address=customer_address,
+            preparation_time=0,
+        )
+    ]
+    dispatcher = Dispatcher(
+        bag_limit=2,
+        max_t=5,
+        dim=5,
+        orders=order,
+        riders=rider,
+    )
+
+    assert dispatcher.riders[0]._goal_position is None
+
+    dispatcher.step()
+    assert dispatcher.orders[0].assigned_at == 0
+    assert dispatcher.riders[0]._goal_position == restaurant_address
+
+    dispatcher.step()
+    assert dispatcher.orders[0].pick_up_at == 1
+    assert dispatcher.riders[0]._goal_position == customer_address
+
+    dispatcher.step()
+    # previous step did the pick now is moving
+    assert dispatcher.orders[0].drop_off_at is None
+    assert dispatcher.riders[0]._goal_position == customer_address
+
+    dispatcher.step()
+    assert dispatcher.orders[0].drop_off_at == 3
+    assert dispatcher.riders[0]._goal_position == customer_address

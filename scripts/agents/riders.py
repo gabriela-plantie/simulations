@@ -40,8 +40,9 @@ class RiderAgent(Agent):
             - if bag empty -> remains
         """
         self._bag.remove(order)
-        if len(self._bag) > 0:
+        if self.rider_has_bag():
             self._goal_position = self._bag[0].customer_address
+
         order._rider_drop_off(t=t, rider_id=self.id)
 
     def move(self):
@@ -146,11 +147,13 @@ class RiderAgent(Agent):
 
         if self.rider_finished_pickup():
             self.model.sort_orders_in_bag(self)  # Ordena los pedidos en la bolsa
+            self._goal_position = self._bag[0].customer_address
 
     def _deliver_order(self):
-        if self._bag:
-            order = self._bag[0]
-            self._remove_order_from_bag(order, self.model.t)
+        if self.rider_has_bag():
+            self._remove_order_from_bag(self._bag[0], self.model.t)
+        else:
+            raise ValueError("Rider has no bag to deliver from")
 
     def _handle_reached_goal(self):
         if (
@@ -160,6 +163,8 @@ class RiderAgent(Agent):
             self._pickup_orders()
         elif self.rider_is_going_to_customer():
             self._deliver_order()
+        # else:
+        #     print(f"Rider {self.id} idle")
 
     def reorder_bag(self, ordered_bag):
         self._rider_bag = ordered_bag
