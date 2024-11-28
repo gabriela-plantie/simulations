@@ -21,6 +21,9 @@ class Dispatcher(Model):
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
             # agent_reporters={"State": "state"}
             {
+                "riders_in_shift": lambda m: sum(
+                    [r.rider_shift_within_time_limits(self.t) for r in m.riders]
+                ),
                 "riders_idle": lambda m: sum(
                     [r.rider_is_idle(self.t) for r in m.riders]
                 ),
@@ -37,9 +40,6 @@ class Dispatcher(Model):
                         for r in m.riders
                     ]
                 ),
-                "orders_delivered_cum": lambda m: sum(
-                    [o.drop_off_at is not None for o in m.orders]
-                ),
                 "orders_created": lambda m: sum(
                     [(o.creation_at == m.t) for o in m.orders]
                 ),
@@ -49,7 +49,7 @@ class Dispatcher(Model):
                 "orders_delivered": lambda m: sum(
                     [o.drop_off_at == self.t for o in m.orders]
                 ),
-                "orders_waiting_cum": lambda m: sum(
+                "orders_waiting": lambda m: sum(
                     [(o.assigned_at is None and o.creation_at <= m.t) for o in m.orders]
                 ),
                 "delivery_time_cum": lambda m: np.mean(
@@ -82,6 +82,9 @@ class Dispatcher(Model):
                 ),
                 "orders_picked_up_cum": lambda m: sum(
                     [o.pick_up_at is not None for o in m.orders]
+                ),
+                "orders_delivered_cum": lambda m: sum(
+                    [o.drop_off_at is not None for o in m.orders]
                 ),
             }
         )

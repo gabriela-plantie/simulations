@@ -43,7 +43,7 @@ def test_collector_no_stacking():
     assert all(
         [
             not (
-                dispatcher.datacollector.model_vars["orders_waiting_cum"][t] > 0
+                dispatcher.datacollector.model_vars["orders_waiting"][t] > 0
                 and dispatcher.datacollector.model_vars["riders_idle"][t] > 0
             )
             for t in range(max_t)
@@ -77,7 +77,7 @@ def test_collector_no_stacking():
     assert (
         max(
             [
-                dispatcher.datacollector.model_vars["orders_picked_up"][t]
+                dispatcher.datacollector.model_vars["orders_picked_up_cum"][t]
                 for t in range(max_t)
             ]
         )
@@ -97,9 +97,9 @@ def test_collector_no_stacking():
     assert all(
         [
             (
-                dispatcher.datacollector.model_vars["orders_assigned"][t]
-                >= dispatcher.datacollector.model_vars["orders_picked_up"][t]
-                >= dispatcher.datacollector.model_vars["orders_delivered"][t]
+                dispatcher.datacollector.model_vars["orders_assigned_cum"][t]
+                >= dispatcher.datacollector.model_vars["orders_picked_up_cum"][t]
+                >= dispatcher.datacollector.model_vars["orders_delivered_cum"][t]
             )
             for t in range(max_t)
         ]

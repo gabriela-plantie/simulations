@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import solara
 from matplotlib.figure import Figure
 from mesa.visualization.utils import update_counter
@@ -33,3 +34,19 @@ def Graph(model):
     # because plt.hist is not thread-safe.
     ax.plot([model.t], [riders_free])
     solara.FigureMatplotlib(fig)
+
+
+def plot_lines(df, cols):
+    fig, ax1 = plt.subplots()
+
+    for c in cols[0]:
+        ax1.plot(df[c], label=c)
+    ax1.tick_params("y", colors="blue")
+    ax1.legend(loc="upper left")
+    ax2 = ax1.twinx()
+    for c in cols[1]:
+        ax2.plot(df[c], label=c, linestyle="--")
+    ax2.tick_params("y", colors="red")
+    ax2.legend(loc="upper right")
+
+    plt.show()
