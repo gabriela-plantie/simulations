@@ -25,15 +25,11 @@ class MipRiderVendor:
         idle_riders,
         orders_to_assign,
     ):
-        restaurant_addresses = set(o.restaurant_address for o in orders_to_assign)
-        restaurants = {i: pos for i, pos in enumerate(restaurant_addresses)}
 
-        orders_by_restaurant = {
-            vendor_id: [order]
-            for vendor_id, vendor_address in restaurants.items()
-            for order in orders_to_assign
-            if order.restaurant_address == vendor_address
-        }
+        restaurants = self.get_restaurants(orders_to_assign)
+        orders_by_restaurant = self.get_orders_by_restaurant(
+            orders_to_assign, restaurants
+        )
 
         # TODO create a class for restaurant
         # add id of restaurant to order
@@ -69,16 +65,16 @@ class MipRiderVendor:
         # NO PUEDE PASAR Q HAYA RIDERS LIBRES Y RESTAURANTS SIN RIDERS
         # vendor_num_riders[vendor_id] == 0 ->
         # rider_num_vendors[rider] > 0 para todo rider
-        # V R
-        # 0 0 -> F
-        # 0 1 -> T
-        # 1 0 -> T
-        # 1 1 -> T
+        # V R          V  R
+        # 0 0 -> F   # 0  0
+        # 0 1 -> T   # 0  2
+        # 1 0 -> T   # 2  0
+        # 1 1 -> T   # 2  2
 
         for rider in idle_riders:
             solver.Add(
                 constraint=(rider_num_vendors[rider.id] <= 1),
-                name=f"rider {rider.id} must have max 1 vendor assigned",
+                name=f"rider {rider.id} must have max bag size vendors assigned",
             )
 
         for vendor_id in restaurants.keys():
@@ -138,3 +134,18 @@ class MipRiderVendor:
                     rider_orders[rider.id].extend(orders_by_restaurant[restaurant_id])
 
         return rider_orders
+
+    def get_restaurants(self, orders_to_assign):
+        restaurant_addresses = set(o.restaurant_address for o in orders_to_assign)
+        restaurants = {i: pos for i, pos in enumerate(restaurant_addresses)}
+        return restaurants
+
+    def get_orders_by_restaurant(self, orders_to_assign, restaurants):
+        orders_by_restaurant = {}
+        for vendor_id, vendor_address in restaurants.items():
+            orders_by_restaurant[vendor_id] = []
+            for order in orders_to_assign:
+                if order.restaurant_address == vendor_address:
+                    orders_by_restaurant[vendor_id].append(order)
+
+        return orders_by_restaurant

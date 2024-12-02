@@ -112,7 +112,7 @@ def test_vrp_assign_vendor_to_rider():
     ]
 
     dispatcher_config = {
-        "bag_limit": 2,
+        "bag_limit": 3,
         "max_t": 10,
         "dim": 4,
         "orders": orders,

@@ -111,37 +111,41 @@ class Dispatcher(Model):
                 break
 
     def assign_orders_mip(self):
-        available_riders = self.get_available_riders()
         # For now, we will allow stacking only at the vendor
-        # assign orders to rider
-        for order in self.orders_to_assign[:]:
+        # while (len(self.get_idle_riders()) > 0) and (len(self.orders_to_assign) > 0):
+        # TODO:
+        # o mientras haya orders para asignar
+        # y haya riders ocupados pero q pueden aceptar
+        # y haya riders yendo a esos vendors
+        # (costoso de chequear - variable por vendor?)
 
-            # first tries to add the order
-            # to a rider that is already going to the vendor
-            self.assing_order_to_rider_going_to_vendor(available_riders, order)
+        for _ in range(2):
+            print(f"time {self.t}")
+            available_riders = self.get_available_riders()
+            for order in self.orders_to_assign[:]:
+                self.assing_order_to_rider_going_to_vendor(available_riders, order)
+            self.assign_riders_to_vendor_mip()
+        return None
 
+    def assign_riders_to_vendor_mip(self):
+        idle_riders = self.get_idle_riders()
         rider_orders = MipRiderVendor().optimize_rider_to_vendor(
-            idle_riders=self.get_idle_riders(),
+            idle_riders=idle_riders,
             orders_to_assign=self.orders_to_assign.copy(),
         )
 
         for rider_id, orders in rider_orders.items():
             for order in orders:
-                rider = [
-                    rider for rider in self.get_idle_riders() if rider.id == rider_id
-                ][0]
+                rider = self.get_rider_from_id(idle_riders, rider_id)
                 # assign order to rider
-                rider._add_order_to_queue(order=order, t=self.t)
-                self.orders_to_assign.remove(order)
-                available_riders = self.get_available_riders()
+                # TODO check queue capacity before add order to queue
+                # rider.rider_can_accept_orders(bag_limit, t)
+                if rider.rider_can_accept_orders(self.bag_limit, self.t):
+                    rider._add_order_to_queue(order=order, t=self.t)
+                    self.orders_to_assign.remove(order)
 
-        available_riders = self.get_available_riders()
-        for order in self.orders_to_assign[:]:
-
-            # first tries to add the order
-            # to a rider that is already going to the vendor
-            self.assing_order_to_rider_going_to_vendor(available_riders, order)
-        return None
+    def get_rider_from_id(self, riders, rider_id):
+        return [rider for rider in riders if rider.id == rider_id][0]
 
     def sort_orders_in_bag(self, rider):
         """
