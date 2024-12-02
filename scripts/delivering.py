@@ -1,5 +1,6 @@
 from mesa import DataCollector, Model, space, time
 
+from scripts.optim.mip_rider_to_vendor import MipRiderVendor
 from scripts.optim.tsp import LocalSearch
 from scripts.optim.utils import Point, orders_to_points, points_to_orders
 from scripts.utils import RiderGenerator, data_collector
@@ -40,7 +41,8 @@ class Dispatcher(Model):
         self.sub_t = self.sub_t % self.slowness
 
         self.get_orders_to_assign()
-        self.assign_orders()
+        # self.assign_orders()
+        self.assign_orders_mip()
         self.agents.do("step")
 
         self.schedule.step()
@@ -75,6 +77,9 @@ class Dispatcher(Model):
             )
         )
 
+    def get_idle_riders(self):
+        return list(self.agents.select(lambda a: a.rider_is_idle(t=self.t)))
+
     def assign_orders(self):
         available_riders = self.get_available_riders()
         # For now, we will allow stacking only at the vendor
@@ -83,26 +88,60 @@ class Dispatcher(Model):
 
             # first tries to add the order
             # to a rider that is already going to the vendor
-            for rider in available_riders[:]:
-                if rider.rider_is_going_to_this_vendor(
-                    order
-                ) and rider.rider_can_accept_orders(bag_limit=self.bag_limit, t=self.t):
-                    rider._add_order_to_queue(order=order, t=self.t)
-                    self.orders_to_assign.remove(order)
-
-                    if not rider.rider_has_capacity_in_bag(self.bag_limit):
-                        # CHECK tiene sentido?
-                        available_riders.remove(rider)
-                    break
+            self.assing_order_to_rider_going_to_vendor(available_riders, order)
 
             # if it cannot not then it adds it to the free riders
             if order in self.orders_to_assign[:]:
-                for rider in list(
-                    self.agents.select(lambda a: a.rider_is_idle(self.t))
-                ):
+                for rider in self.get_idle_riders():
                     rider._add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
                     break
+
+    def assing_order_to_rider_going_to_vendor(self, available_riders, order):
+        for rider in available_riders[:]:
+            if rider.rider_is_going_to_this_vendor(
+                order
+            ) and rider.rider_can_accept_orders(bag_limit=self.bag_limit, t=self.t):
+                rider._add_order_to_queue(order=order, t=self.t)
+                self.orders_to_assign.remove(order)
+
+                if not rider.rider_has_capacity_in_bag(self.bag_limit):
+                    # CHECK tiene sentido?
+                    available_riders.remove(rider)
+                break
+
+    def assign_orders_mip(self):
+        available_riders = self.get_available_riders()
+        # For now, we will allow stacking only at the vendor
+        # assign orders to rider
+        for order in self.orders_to_assign[:]:
+
+            # first tries to add the order
+            # to a rider that is already going to the vendor
+            self.assing_order_to_rider_going_to_vendor(available_riders, order)
+
+        rider_orders = MipRiderVendor().optimize_rider_to_vendor(
+            idle_riders=self.get_idle_riders(),
+            orders_to_assign=self.orders_to_assign.copy(),
+        )
+
+        for rider_id, orders in rider_orders.items():
+            for order in orders:
+                rider = [
+                    rider for rider in self.get_idle_riders() if rider.id == rider_id
+                ][0]
+                # assign order to rider
+                rider._add_order_to_queue(order=order, t=self.t)
+                self.orders_to_assign.remove(order)
+                available_riders = self.get_available_riders()
+
+        available_riders = self.get_available_riders()
+        for order in self.orders_to_assign[:]:
+
+            # first tries to add the order
+            # to a rider that is already going to the vendor
+            self.assing_order_to_rider_going_to_vendor(available_riders, order)
+        return None
 
     def sort_orders_in_bag(self, rider):
         """

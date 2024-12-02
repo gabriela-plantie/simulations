@@ -2,6 +2,9 @@ import random
 
 import pytest
 
+from scripts.agents.orders import Order
+from scripts.agents.riders import Rider
+from scripts.delivering import Dispatcher
 from scripts.optim.tsp import LocalSearch
 from scripts.optim.utils import Point, calculate_path_len, two_swap
 
@@ -68,3 +71,100 @@ def test_2opt_for_bag(
     assert new_distance < distance
     assert new_distance == expected_distance
     assert [o.id for o in new_route][1:] == expected_route_ids
+
+
+def test_vrp_assign_vendor_to_rider():
+    """
+    MIP to choose for each rider the vendor that
+    min the total distances from where riders are to vendors.
+    In the following graph:
+    - vi is vendor
+    - r is a rider
+    - o is no customer
+    - numbers represents orders and their positions are the correspondend
+    customers places.
+    """
+
+    # o   o   o   o   v2
+    # o   o   o   o   o
+    # o   o   o   o   o
+    # v1  o   o   o   o
+    # o  r2   r1  o   o
+
+    orders = [
+        Order(
+            id=1,
+            creation_at=0,  # (i+1)*1,
+            restaurant_address=(0, 1),
+            customer_address=(3, 0),
+        ),
+        Order(
+            id=2,
+            creation_at=0,  # (i+1)*1,
+            restaurant_address=(4, 4),
+            customer_address=(3, 1),
+        ),
+    ]
+
+    riders = [
+        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(2, 0)),
+        Rider(id=2, shift_start_at=0, shift_end_at=5, starting_point=(1, 0)),
+    ]
+
+    dispatcher_config = {
+        "bag_limit": 2,
+        "max_t": 10,
+        "dim": 4,
+        "orders": orders,
+        "riders": riders,
+    }
+    dispatcher = Dispatcher(**dispatcher_config)
+    dispatcher.step()
+    assert [(r.id, o.id) for r in dispatcher.riders for o in r._queue] == [
+        (1, 2),
+        (2, 1),
+    ], "order should be assigned to rider closer to vendor"
+
+    assert [r.pos for r in dispatcher.riders if r.id == 2][0] == (
+        0,
+        0,
+    ), "rider 2 moved to position 0,0"
+
+    # o     o      o    o   O2v2
+    # o     o      o    o   o
+    # o     O3v2   o    o   o
+    # O1v1   o     o    o   o
+    # o     r2     r1   o   o
+
+    orders.append(
+        Order(
+            id=3,
+            creation_at=1,  # (i+1)*1,
+            restaurant_address=(4, 4),
+            customer_address=(1, 2),
+        )
+    )
+    dispatcher = Dispatcher(**dispatcher_config)
+
+    dispatcher.step()  # t=0
+    assert [(r.id, o.id) for r in dispatcher.riders for o in r._queue] == [
+        (1, 2),
+        (2, 1),
+    ], "order should be assigned to rider closer to vendor"
+
+    assert [r.pos for r in dispatcher.riders if r.id == 2][0] == (
+        0,
+        0,
+    ), "rider 2 moved to position 0,0"
+
+    dispatcher.step()  # t=1
+    assert [(r.id, o.id) for r in dispatcher.riders for o in r._queue] == [
+        (1, 2),
+        (1, 3),
+        (2, 1),
+    ], "order should be assigned to rider already going to vendor"
+
+    assert [r.pos for r in dispatcher.riders if r.id == 2][0] == (
+        0,
+        1,
+    ), "rider 2 moved to position 0,1"

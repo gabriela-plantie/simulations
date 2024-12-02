@@ -25,8 +25,8 @@ def test_always_assigned_when_free_riders():
         for i in range(num_orders)
     ]
     riders = [
-        Rider(id=1, shift_start_at=0, shift_end_at=10, starting_point=(0, 0))
-        for _ in range(num_riders)
+        Rider(id=i, shift_start_at=0, shift_end_at=10, starting_point=(0, 0))
+        for i in range(num_riders)
     ]
 
     dispatcher = Dispatcher(
@@ -156,8 +156,8 @@ def test_stacking():
         for i, cust_address in enumerate([(2, 2), (2, 3)])
     ]
     riders = [
-        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
-        for _ in range(num_riders)
+        Rider(id=i, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for i in range(num_riders)
     ]
     dispatcher = Dispatcher(
         bag_limit=2,
