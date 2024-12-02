@@ -62,3 +62,65 @@ class OrderGenerator:
             orders.append(orders_in_t)
             previous_tot = previous_tot + len(orders_in_t)
         return [o for ord in orders for o in ord]
+
+
+def data_collector():
+    return {
+        "riders_in_shift": lambda m: sum(
+            [r.rider_shift_within_time_limits(m.t) for r in m.riders]
+        ),
+        "riders_idle": lambda m: sum([r.rider_is_idle(m.t) for r in m.riders]),
+        "riders_going_to_vendor": lambda m: sum(
+            [r.rider_is_going_to_vendor() for r in m.riders]
+        ),
+        "riders_going_to_customer": lambda m: sum(
+            [r.rider_is_going_to_customer() for r in m.riders]
+        ),
+        "riders_doing_overtime": lambda m: sum(
+            [
+                (r.rider_is_going_to_customer() or r.rider_is_going_to_vendor())
+                and not r.rider_shift_within_time_limits(m.t)
+                for r in m.riders
+            ]
+        ),
+        "orders_created": lambda m: sum([(o.creation_at == m.t) for o in m.orders]),
+        "orders_assigned": lambda m: sum([(o.assigned_at == m.t) for o in m.orders]),
+        "orders_delivered": lambda m: sum([o.drop_off_at == m.t for o in m.orders]),
+        "orders_waiting": lambda m: sum(
+            [(o.assigned_at is None and o.creation_at <= m.t) for o in m.orders]
+        ),
+        "delivery_time": lambda m: np.mean(
+            [
+                (o.drop_off_at - o.creation_at)
+                for o in m.orders
+                if (
+                    (o.creation_at <= m.t)
+                    and (o.drop_off_at is not None)
+                    and (o.drop_off_at >= m.t)
+                )
+            ]
+        ),
+        "delivery_time_cum": lambda m: np.mean(
+            [
+                (o.drop_off_at - o.creation_at)
+                for o in m.orders
+                if o.drop_off_at is not None
+            ]
+        ),
+        "queue_size": lambda m: np.mean(
+            [len(r._queue) for r in m.riders if len(r._queue) > 0]
+        ),
+        # TODO FIX warning mean of empty
+        "bag_size": lambda m: np.mean(
+            [len(r._bag) for r in m.riders if len(r._bag) > 0]
+        ),
+        "orders_assigned_cum": lambda m: sum(
+            [o.assigned_at is not None for o in m.orders]
+        ),
+        "orders_picked_up_cum": lambda m: sum(
+            [o.pick_up_at is not None for o in m.orders]
+        ),
+        "orders_delivered_cum": lambda m: sum(
+            [o.drop_off_at is not None for o in m.orders]
+        ),
+    }

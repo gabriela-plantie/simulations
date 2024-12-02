@@ -7,7 +7,7 @@ from scripts.delivering import Dispatcher
 from scripts.utils import OrderGenerator
 
 
-def test_always_assigned_when_free_riders():
+def test_all_orders_should_be_assigned_when_free_riders():
     # if orders not assigned -> no rider free
     # assert not riders free and orders not assigned
 
@@ -25,8 +25,8 @@ def test_always_assigned_when_free_riders():
         for i in range(num_orders)
     ]
     riders = [
-        Rider(id=1, shift_start_at=0, shift_end_at=10, starting_point=(0, 0))
-        for _ in range(num_riders)
+        Rider(id=i, shift_start_at=0, shift_end_at=10, starting_point=(0, 0))
+        for i in range(num_riders)
     ]
 
     dispatcher = Dispatcher(
@@ -143,6 +143,38 @@ def test_orders_times_steps():
 # las asigno a diferentes riders
 
 
+def test_bag_size():
+    restaurant_address = (1, 1)
+    num_riders = 2
+    bag_limit = 2
+
+    orders = [
+        Order(
+            id=i,
+            creation_at=0,
+            restaurant_address=restaurant_address,
+            customer_address=cust_address,
+        )
+        for i, cust_address in enumerate([(2, 2), (2, 3), (2, 3)])
+    ]
+    riders = [
+        Rider(id=i, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for i in range(num_riders)
+    ]
+    dispatcher = Dispatcher(
+        bag_limit=bag_limit,
+        max_t=5,
+        dim=5,
+        orders=orders,
+        riders=riders,
+    )
+    dispatcher.step()
+    assert len(dispatcher.riders[0]._queue) == bag_limit
+    assert len(dispatcher.riders[1]._queue) == 1
+
+    dispatcher.step()
+
+
 def test_stacking():
     restaurant_address = (1, 1)
     num_riders = 2
@@ -156,8 +188,8 @@ def test_stacking():
         for i, cust_address in enumerate([(2, 2), (2, 3)])
     ]
     riders = [
-        Rider(id=1, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
-        for _ in range(num_riders)
+        Rider(id=i, shift_start_at=0, shift_end_at=5, starting_point=(0, 0))
+        for i in range(num_riders)
     ]
     dispatcher = Dispatcher(
         bag_limit=2,

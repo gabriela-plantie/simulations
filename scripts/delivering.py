@@ -1,9 +1,9 @@
-import numpy as np
 from mesa import DataCollector, Model, space, time
 
+from scripts.optim.mip_rider_to_vendor import MipRiderVendor
 from scripts.optim.tsp import LocalSearch
 from scripts.optim.utils import Point, orders_to_points, points_to_orders
-from scripts.utils import RiderGenerator
+from scripts.utils import RiderGenerator, data_collector
 
 
 class Dispatcher(Model):
@@ -20,73 +20,7 @@ class Dispatcher(Model):
         self.datacollector = DataCollector(
             # model_reporters={"mean_age": lambda m: m.agents.agg("age", np.mean)},
             # agent_reporters={"State": "state"}
-            {
-                "riders_in_shift": lambda m: sum(
-                    [r.rider_shift_within_time_limits(self.t) for r in m.riders]
-                ),
-                "riders_idle": lambda m: sum(
-                    [r.rider_is_idle(self.t) for r in m.riders]
-                ),
-                "riders_going_to_vendor": lambda m: sum(
-                    [r.rider_is_going_to_vendor() for r in m.riders]
-                ),
-                "riders_going_to_customer": lambda m: sum(
-                    [r.rider_is_going_to_customer() for r in m.riders]
-                ),
-                "riders_doing_overtime": lambda m: sum(
-                    [
-                        (r.rider_is_going_to_customer() or r.rider_is_going_to_vendor())
-                        and not r.rider_shift_within_time_limits(m.t)
-                        for r in m.riders
-                    ]
-                ),
-                "orders_created": lambda m: sum(
-                    [(o.creation_at == m.t) for o in m.orders]
-                ),
-                "orders_assigned": lambda m: sum(
-                    [(o.assigned_at == m.t) for o in m.orders]
-                ),
-                "orders_delivered": lambda m: sum(
-                    [o.drop_off_at == self.t for o in m.orders]
-                ),
-                "orders_waiting": lambda m: sum(
-                    [(o.assigned_at is None and o.creation_at <= m.t) for o in m.orders]
-                ),
-                "delivery_time": lambda m: np.mean(
-                    [
-                        (o.drop_off_at - o.creation_at)
-                        for o in m.orders
-                        if (
-                            (o.creation_at <= m.t)
-                            and (o.drop_off_at is not None)
-                            and (o.drop_off_at >= m.t)
-                        )
-                    ]
-                ),
-                "delivery_time_cum": lambda m: np.mean(
-                    [
-                        (o.drop_off_at - o.creation_at)
-                        for o in m.orders
-                        if o.drop_off_at is not None
-                    ]
-                ),
-                "queue_size": lambda m: np.mean(
-                    [len(r._queue) for r in m.riders if len(r._queue) > 0]
-                ),
-                # TODO FIX warning mean of empty
-                "bag_size": lambda m: np.mean(
-                    [len(r._bag) for r in m.riders if len(r._bag) > 0]
-                ),
-                "orders_assigned_cum": lambda m: sum(
-                    [o.assigned_at is not None for o in m.orders]
-                ),
-                "orders_picked_up_cum": lambda m: sum(
-                    [o.pick_up_at is not None for o in m.orders]
-                ),
-                "orders_delivered_cum": lambda m: sum(
-                    [o.drop_off_at is not None for o in m.orders]
-                ),
-            }
+            data_collector()
         )
         self.bag_limit = bag_limit
         self.max_t = max_t
@@ -107,7 +41,8 @@ class Dispatcher(Model):
         self.sub_t = self.sub_t % self.slowness
 
         self.get_orders_to_assign()
-        self.assign_orders()
+        # self.assign_orders()
+        self.assign_orders_mip()
         self.agents.do("step")
 
         self.schedule.step()
@@ -142,6 +77,9 @@ class Dispatcher(Model):
             )
         )
 
+    def get_idle_riders(self):
+        return list(self.agents.select(lambda a: a.rider_is_idle(t=self.t)))
+
     def assign_orders(self):
         available_riders = self.get_available_riders()
         # For now, we will allow stacking only at the vendor
@@ -150,26 +88,64 @@ class Dispatcher(Model):
 
             # first tries to add the order
             # to a rider that is already going to the vendor
-            for rider in available_riders[:]:
-                if rider.rider_is_going_to_this_vendor(
-                    order
-                ) and rider.rider_can_accept_orders(bag_limit=self.bag_limit, t=self.t):
-                    rider._add_order_to_queue(order=order, t=self.t)
-                    self.orders_to_assign.remove(order)
-
-                    if not rider.rider_has_capacity_in_bag(self.bag_limit):
-                        # CHECK tiene sentido?
-                        available_riders.remove(rider)
-                    break
+            self.assing_order_to_rider_going_to_vendor(available_riders, order)
 
             # if it cannot not then it adds it to the free riders
             if order in self.orders_to_assign[:]:
-                for rider in list(
-                    self.agents.select(lambda a: a.rider_is_idle(self.t))
-                ):
+                for rider in self.get_idle_riders():
                     rider._add_order_to_queue(order, self.t)
                     self.orders_to_assign.remove(order)
                     break
+
+    def assing_order_to_rider_going_to_vendor(self, available_riders, order):
+        for rider in available_riders[:]:
+            if rider.rider_is_going_to_this_vendor(
+                order
+            ) and rider.rider_can_accept_orders(bag_limit=self.bag_limit, t=self.t):
+                rider._add_order_to_queue(order=order, t=self.t)
+                self.orders_to_assign.remove(order)
+
+                if not rider.rider_has_capacity_in_bag(self.bag_limit):
+                    # CHECK tiene sentido?
+                    available_riders.remove(rider)
+                break
+
+    def assign_orders_mip(self):
+        # For now, we will allow stacking only at the vendor
+        # while (len(self.get_idle_riders()) > 0) and (len(self.orders_to_assign) > 0):
+        # TODO:
+        # o mientras haya orders para asignar
+        # y haya riders ocupados pero q pueden aceptar
+        # y haya riders yendo a esos vendors
+        # (costoso de chequear - variable por vendor?)
+
+        for _ in range(2):
+            print(f"time {self.t}")
+            available_riders = self.get_available_riders()
+            for order in self.orders_to_assign[:]:
+                self.assing_order_to_rider_going_to_vendor(available_riders, order)
+            self.assign_riders_to_vendor_mip()
+        return None
+
+    def assign_riders_to_vendor_mip(self):
+        idle_riders = self.get_idle_riders()
+        rider_orders = MipRiderVendor().optimize_rider_to_vendor(
+            idle_riders=idle_riders,
+            orders_to_assign=self.orders_to_assign.copy(),
+        )
+
+        for rider_id, orders in rider_orders.items():
+            for order in orders:
+                rider = self.get_rider_from_id(idle_riders, rider_id)
+                # assign order to rider
+                # TODO check queue capacity before add order to queue
+                # rider.rider_can_accept_orders(bag_limit, t)
+                if rider.rider_can_accept_orders(self.bag_limit, self.t):
+                    rider._add_order_to_queue(order=order, t=self.t)
+                    self.orders_to_assign.remove(order)
+
+    def get_rider_from_id(self, riders, rider_id):
+        return [rider for rider in riders if rider.id == rider_id][0]
 
     def sort_orders_in_bag(self, rider):
         """
