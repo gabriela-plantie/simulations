@@ -17,15 +17,14 @@ class CPShifts:
         ]
 
     def get_shifts_len_possibilities(self, max_len, min_len):
-        # ESTA MAL!!!!
-        # create max number of shifts of each type
+        # TODO improve this upper limit
         max_demand = max([demand for _, demand in self.rider_demand.items()])
         times = self.rider_demand.keys()
         total_times = max(times) - min(times) + 1
         max_area = total_times * max_demand
         max_shifts = {}
         for _len in np.arange(min_len, max_len + 1):
-            max_shifts[_len] = max(max_demand, np.ceil(max_area / (_len * 1)))
+            max_shifts[int(_len)] = int(np.ceil(max_area / (1 * _len)))
         return max_shifts
 
         # create variables
@@ -44,13 +43,14 @@ class CPShifts:
         t_shifts = [
             model.NewIntVar(
                 lb=min(times),
-                ub=max(max(times) - min_len, min_len),
+                ub=max(max(times) - min_len + 1, 0),
                 name=f"t_for_shift_id_{s}",
             )
             for s in range(max_total_shifts)
         ]
 
         len_domain = [0] + list(range(min_len, max_len + 1))
+        print(f"len_domain {len_domain}")
         len_shifts = [
             model.NewIntVarFromDomain(
                 domain=cp_model.Domain.FromValues(len_domain),
@@ -58,14 +58,6 @@ class CPShifts:
             )
             for s in range(max_total_shifts)
         ]
-
-        # active_riders_in_t = [
-        #     sum([
-        #         1 for t_ini, _len in zip(t_shifts, len_shifts)
-        #         if  ((t_ini <= t) and (t < (t_ini + _len)))
-        #         ])
-        #     for t in times
-        #     ]
 
         active_riders_in_t = []
         for t in times:
@@ -81,33 +73,25 @@ class CPShifts:
                 model.Add(t < t_ini + _len).OnlyEnforceIf(active_shifts_at_t[s])
 
                 # Create Boolean variables for the conditions
-                t_ini_le_t = model.NewBoolVar(f"t_ini_le_t_{s}_{t}")
-                t_lt_t_ini_plus_len = model.NewBoolVar(f"t_lt_t_ini_plus_len_{s}_{t}")
+                shift_started_before_t = model.NewBoolVar(
+                    f"shift_{s}_started_before_{t}"
+                )
+                shift_ended_after_t = model.NewBoolVar(f"shift_{s}_ended_after_{t}")
 
                 # Link constraints to Boolean variables
-                model.Add(t_ini <= t).OnlyEnforceIf(t_ini_le_t)
-                model.Add(t_ini > t).OnlyEnforceIf(t_ini_le_t.Not())
+                # shift_started_before_t -> t_ini <= t  A -> B1, A-> B2
+                model.Add(t_ini <= t).OnlyEnforceIf(shift_started_before_t)
+                model.Add(t < t_ini + _len).OnlyEnforceIf(shift_ended_after_t)
 
-                model.Add(t < t_ini + _len).OnlyEnforceIf(t_lt_t_ini_plus_len)
-                model.Add(t >= t_ini + _len).OnlyEnforceIf(t_lt_t_ini_plus_len.Not())
-
-                # Combine the Boolean variables into a composite condition
-                combined_condition = model.NewBoolVar(f"combined_condition_{s}_{t}")
-                model.AddBoolAnd([t_ini_le_t, t_lt_t_ini_plus_len]).OnlyEnforceIf(
-                    combined_condition
-                )
-
-                # Add the "if and only if" relationship
-                model.Add(active_shifts_at_t[s] == combined_condition)
+                # (B1/\B2) -> A
+                model.AddBoolAnd(
+                    [shift_started_before_t, shift_ended_after_t]
+                ).OnlyEnforceIf(active_shifts_at_t[s])
 
             active_riders_in_t.append(sum(active_shifts_at_t))
 
             for s in range(max_total_shifts):
-                # Enforce len_shifts[s] == 0 if the shift is not active
                 model.Add(len_shifts[s] == 0).OnlyEnforceIf(active_shifts_at_t[s].Not())
-
-                # Alternatively, enforce len_shifts[s] >= 1 only if the shift is active
-                model.Add(len_shifts[s] >= 1).OnlyEnforceIf(active_shifts_at_t[s])
 
         # define slack var for each t
         slacks = [
@@ -131,13 +115,12 @@ class CPShifts:
             for t in times
         ]
         for t in times:
-            # Modelo del valor absoluto
             model.Add(abs_slacks[t] >= slacks[t])
             model.Add(abs_slacks[t] >= -slacks[t])
 
         objective = sum(abs_slacks)
-
         model.Minimize(objective)
+
         solver = cp_model.CpSolver()
         status = solver.Solve(model)
         print(solver.StatusName(status))
@@ -147,8 +130,8 @@ class CPShifts:
                 [solver.Value(s) for s in len_shifts],
             )
         )
+        print(f"objective reached: {solver.objective_value}")
         return Counter(sol)
-        1
 
         # # {long 3: [3,4,8]} # a que hora empieza cada uno
         # start_time_of_shifts_by_type = {}
