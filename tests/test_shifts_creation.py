@@ -14,7 +14,7 @@ from scripts.shifts.create_shifts import CPShifts
         # # 9 shifts of len 3 and startime 0 -> obj = 2
         (3, 3, {0: 10, 1: 9, 2: 8}, 2, {(0, 3): 9}),
         (2, 3, {0: 1, 1: 2, 2: 2}, 0, {(0, 3): 1, (1, 2): 1}),
-        # (2, 3, {0: 2, 1: 2, 2: 1}, 0, {(0, 3): 1, (1, 2): 1}),  #failing test
+        (2, 3, {0: 2, 1: 2, 2: 1}, 0, {(0, 2): 1, (0, 3): 1}),  # failing test
     ],
 )
 def test_rider_demand_satisfaction(
