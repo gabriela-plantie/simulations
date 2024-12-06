@@ -1,6 +1,6 @@
 import random
 
-from scripts.optim.utils import (
+from scripts.optim_routes.utils import (
     Point,
     calculate_distances_dict,
     calculate_path_len,

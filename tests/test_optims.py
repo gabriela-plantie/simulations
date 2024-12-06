@@ -5,8 +5,8 @@ import pytest
 from scripts.agents.orders import Order
 from scripts.agents.riders import Rider
 from scripts.delivering import Dispatcher
-from scripts.optim.tsp import LocalSearch
-from scripts.optim.utils import Point, calculate_path_len, two_swap
+from scripts.optim_routes.tsp import LocalSearch
+from scripts.optim_routes.utils import Point, calculate_path_len, two_swap
 
 
 @pytest.mark.parametrize(
