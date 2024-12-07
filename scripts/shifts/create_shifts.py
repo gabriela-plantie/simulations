@@ -91,7 +91,6 @@ class CPShifts:
             t_shifts=t_shifts,
             len_shifts=len_shifts,
             ever_active_shift=ever_active_shift,
-            min_len=min_len,
         )
 
         # enforce inside grid for active shifts!!!
@@ -102,6 +101,7 @@ class CPShifts:
             len_shifts=len_shifts,
             max_total_shifts=max_total_shifts,
             ever_active_shift=ever_active_shift,
+            min_len=min_len,
         )
 
         active_riders_in_t = self.create_active_riders_in_t(
@@ -130,6 +130,7 @@ class CPShifts:
         model.Minimize(objective)
 
         solver = cp_model.CpSolver()
+
         status = solver.Solve(model)
         print(f"objective reached: {solver.objective_value}")
         print(solver.StatusName(status))
@@ -138,121 +139,6 @@ class CPShifts:
             solver=solver, t_shifts=t_shifts, len_shifts=len_shifts
         )
         return solver.objective_value, Counter(sol)
-
-    def constraint_ever_active_shifts_inside_grid_time(
-        self, model, times, max_total_shifts, t_shifts, len_shifts, ever_active_shift
-    ):
-        for s in range(max_total_shifts):
-            model.Add(t_shifts[s] >= min(times)).OnlyEnforceIf(ever_active_shift[s])
-            model.Add(t_shifts[s] + len_shifts[s] - 1 <= max(times)).OnlyEnforceIf(
-                ever_active_shift[s]
-            )
-            model.Add(t_shifts[s] == max(times) + 1).OnlyEnforceIf(
-                ever_active_shift[s].Not()
-            )
-
-    def format_output(self, t_shifts, len_shifts, solver):
-        sol = list(
-            zip(
-                [solver.Value(s) for s in t_shifts],
-                [solver.Value(s) for s in len_shifts],
-            )
-        )
-        print(sol)
-        return sol
-
-    def create_abs_slacks_for_demand_in_t(self, times, model, slacks):
-        abs_slacks = [
-            model.NewIntVar(
-                lb=0,  # Valor absoluto siempre positivo
-                ub=self.rider_demand[t],  # Máximo posible (basado en la demanda)
-                name=f"abs_slack_for_time_{t}",
-            )
-            for t in times
-        ]
-        for t in times:
-            model.Add(abs_slacks[t] >= slacks[t])
-            model.Add(abs_slacks[t] >= -slacks[t])
-        return abs_slacks
-
-    def create_slacks_for_demand_in_t(self, times, model, active_riders_in_t):
-        slacks = [
-            model.NewIntVar(
-                lb=-self.rider_demand[t],
-                ub=+self.rider_demand[t],
-                name=f"slack_for_time_{t}",
-            )
-            for t in times
-        ]
-        for t in times:
-            model.Add(active_riders_in_t[t] + slacks[t] == self.rider_demand[t])
-        return slacks
-
-    def create_active_riders_in_t(
-        self, model, times, max_total_shifts, active_shift_at_t
-    ):
-        active_riders_in_t = [
-            model.NewIntVar(
-                lb=0,
-                ub=self.rider_demand[t] * 2,  # improev this ub
-                name=f"active_riders_in_{t}",
-            )
-            for t in times
-        ]
-        for t in times:
-            model.Add(
-                active_riders_in_t[t]
-                == sum(active_shift_at_t[t][s] for s in range(max_total_shifts))
-            )
-
-        return active_riders_in_t
-
-    def place_non_actives_shifts(
-        self,
-        times,
-        max_total_shifts,
-        model,
-        t_shifts,
-        len_shifts,
-        ever_active_shift,
-        min_len,
-    ):
-        """
-        If the shift is not active then the start time and the length must be 0
-        """
-        for s in range(max_total_shifts):
-            model.Add(len_shifts[s] == 0).OnlyEnforceIf(ever_active_shift[s].Not())
-
-            model.Add(len_shifts[s] > 0).OnlyEnforceIf(ever_active_shift[s])
-
-            model.Add(t_shifts[s] == max(times) + 1).OnlyEnforceIf(
-                ever_active_shift[s].Not()
-            )
-
-            model.Add(t_shifts[s] <= max(times) - (min_len - 1)).OnlyEnforceIf(
-                ever_active_shift[s]
-            )
-
-    # def create_times_acive_shift()
-
-    def create_ever_active_shift(
-        self, times, max_total_shifts, model, active_shift_at_t
-    ):
-        ever_active_shift = [
-            model.NewBoolVar(name=f"ever_active_shift_{s}")
-            for s in range(max_total_shifts)
-        ]
-
-        for s in range(max_total_shifts):
-            model.AddBoolOr([active_shift_at_t[t][s] for t in times]).OnlyEnforceIf(
-                ever_active_shift[s]
-            )
-
-            model.Add(sum([active_shift_at_t[t][s] for t in times]) == 0).OnlyEnforceIf(
-                ever_active_shift[s].Not()
-            )
-
-        return ever_active_shift
 
     def create_shift_variables(self, max_len, min_len, times, max_total_shifts, model):
         """
@@ -316,3 +202,119 @@ class CPShifts:
                 )
 
         return active_shift_at_t
+
+    def create_ever_active_shift(
+        self, times, max_total_shifts, model, active_shift_at_t
+    ):
+        ever_active_shift = [
+            model.NewBoolVar(name=f"ever_active_shift_{s}")
+            for s in range(max_total_shifts)
+        ]
+
+        for s in range(max_total_shifts):
+            model.AddBoolOr([active_shift_at_t[t][s] for t in times]).OnlyEnforceIf(
+                ever_active_shift[s]
+            )
+
+            model.Add(sum([active_shift_at_t[t][s] for t in times]) == 0).OnlyEnforceIf(
+                ever_active_shift[s].Not()
+            )
+
+        return ever_active_shift
+
+    def constraint_ever_active_shifts_inside_grid_time(
+        self,
+        model,
+        times,
+        max_total_shifts,
+        t_shifts,
+        len_shifts,
+        ever_active_shift,
+        min_len,
+    ):
+        for s in range(max_total_shifts):
+            model.Add(t_shifts[s] >= min(times)).OnlyEnforceIf(ever_active_shift[s])
+            model.Add(len_shifts[s] > 0).OnlyEnforceIf(ever_active_shift[s])
+
+            model.Add(t_shifts[s] + (len_shifts[s] - 1) <= max(times)).OnlyEnforceIf(
+                ever_active_shift[s]
+            )
+            model.Add(t_shifts[s] + (min_len - 1) <= max(times)).OnlyEnforceIf(
+                ever_active_shift[s]
+            )
+
+    def place_non_actives_shifts(
+        self,
+        times,
+        max_total_shifts,
+        model,
+        t_shifts,
+        len_shifts,
+        ever_active_shift,
+    ):
+        """
+        If the shift is not active then the start time and the length must be 0
+        """
+        for s in range(max_total_shifts):
+            model.Add(len_shifts[s] == 0).OnlyEnforceIf(ever_active_shift[s].Not())
+
+            model.Add(t_shifts[s] == max(times) + 1).OnlyEnforceIf(
+                ever_active_shift[s].Not()
+            )
+
+    def create_active_riders_in_t(
+        self, model, times, max_total_shifts, active_shift_at_t
+    ):
+        active_riders_in_t = [
+            model.NewIntVar(
+                lb=0,
+                ub=self.rider_demand[t] * 2,  # improev this ub
+                name=f"active_riders_in_{t}",
+            )
+            for t in times
+        ]
+        for t in times:
+            model.Add(
+                active_riders_in_t[t]
+                == sum(active_shift_at_t[t][s] for s in range(max_total_shifts))
+            )
+
+        return active_riders_in_t
+
+    # def create_times_acive_shift()
+    def create_slacks_for_demand_in_t(self, times, model, active_riders_in_t):
+        slacks = [
+            model.NewIntVar(
+                lb=-self.rider_demand[t],
+                ub=+self.rider_demand[t],
+                name=f"slack_for_time_{t}",
+            )
+            for t in times
+        ]
+        for t in times:
+            model.Add(active_riders_in_t[t] + slacks[t] == self.rider_demand[t])
+        return slacks
+
+    def create_abs_slacks_for_demand_in_t(self, times, model, slacks):
+        abs_slacks = [
+            model.NewIntVar(
+                lb=0,  # Valor absoluto siempre positivo
+                ub=self.rider_demand[t],  # Máximo posible (basado en la demanda)
+                name=f"abs_slack_for_time_{t}",
+            )
+            for t in times
+        ]
+        for t in times:
+            model.Add(abs_slacks[t] >= slacks[t])
+            model.Add(abs_slacks[t] >= -slacks[t])
+        return abs_slacks
+
+    def format_output(self, t_shifts, len_shifts, solver):
+        sol = list(
+            zip(
+                [solver.Value(s) for s in t_shifts],
+                [solver.Value(s) for s in len_shifts],
+            )
+        )
+        print(sol)
+        return sol
