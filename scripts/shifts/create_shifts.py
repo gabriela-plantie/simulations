@@ -131,10 +131,19 @@ class CPShifts:
 
         solver = cp_model.CpSolver()
 
-        status = solver.Solve(model)
+        solver.parameters.log_search_progress = True
+        # solver.log_callback = print
+
+        solution_printer = ConstraintInspector(len_shifts)
+        status = solver.SolveWithSolutionCallback(model, solution_printer)
+
+        # status = solver.Solve(model)
         print(f"objective reached: {solver.objective_value}")
         print(solver.StatusName(status))
         print(f"active riders in t :{[solver.value(r) for r in active_riders_in_t]}")
+        print(f"slacks in t :{[solver.value(r) for r in slacks]}")
+        print(f"abs slacks in t :{[solver.value(r) for r in abs_slacks]}")
+
         sol = self.format_output(
             solver=solver, t_shifts=t_shifts, len_shifts=len_shifts
         )
@@ -277,7 +286,7 @@ class CPShifts:
             model.Add(
                 active_riders_in_t[t]
                 == sum(active_shift_at_t[t][s] for s in range(max_total_shifts))
-            )
+            ).with_name(f"c_active_riders_in_{t}")
 
         return active_riders_in_t
 
@@ -318,3 +327,14 @@ class CPShifts:
         )
         print(sol)
         return sol
+
+
+class ConstraintInspector(cp_model.CpSolverSolutionCallback):
+    def __init__(self, variables):
+        super().__init__()
+        self.__variables = variables
+
+    def OnSolutionCallback(self):
+        print("Solution found:")
+        for var in self.__variables:
+            print(f"{var.Name()} = {self.Value(var)}")
