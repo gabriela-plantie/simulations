@@ -1,8 +1,8 @@
 from mesa import DataCollector, Model, space, time
 
-from scripts.optim.mip_rider_to_vendor import MipRiderVendor
-from scripts.optim.tsp import LocalSearch
-from scripts.optim.utils import Point, orders_to_points, points_to_orders
+from scripts.optim_routes.mip_rider_to_vendor import MipRiderVendor
+from scripts.optim_routes.tsp import LocalSearch
+from scripts.optim_routes.utils import Point, orders_to_points, points_to_orders
 from scripts.utils import RiderGenerator, data_collector
 
 
