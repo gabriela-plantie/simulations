@@ -5,3 +5,4 @@ numpy==2.1.3
 black==24.10.0
 pre_commit==4.0.1
 ortools==9.11.4210
+minizinc==0.9.0
