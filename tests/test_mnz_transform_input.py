@@ -1,4 +1,4 @@
-from minizinc.transform_data_for_mnz_input import minizinc_input
+from minizinc_tools.transform_data_for_mnz_input import minizinc_input
 
 variables = {
     "n_days": 7,

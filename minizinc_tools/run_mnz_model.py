@@ -1,13 +1,13 @@
-import minizinc
+from minizinc import Instance, Model, Solver
 
 
 def run_model(
     model_file=[], model_text=[], timeout=None, solver="gecode", verbose=False
 ):
-    model = minizinc.Model()
-    _solver = minizinc.Solver.lookup(solver)
+    model = Model()
+    _solver = Solver.lookup(solver)
     print(f"SOLVER: {_solver}")
-    inst = minizinc.Instance(_solver, model)
+    inst = Instance(_solver, model)
     if len(model_file) > 0:
         for f in model_file:
             inst.add_file(f)
@@ -16,9 +16,6 @@ def run_model(
         text = ""
         for t in model_text:
             text += t + "\n"
-
-        # with open('./fede_test.mnz', 'w') as file:
-        #     file.write(text)
 
         inst.add_string(text)
     # result = await inst.solve_async(timeout=timeout)
