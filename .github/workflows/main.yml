@@ -19,6 +19,13 @@ jobs:
             echo $PATH
             sudo apt-get update
             sudo apt-get install -y minizinc
+      - name: Add MiniZinc to PATH
+        run: echo "PATH=/usr/bin:$PATH" >> $GITHUB_ENV
+      
+      - name: Verify MiniZinc Installation
+        run: minizinc --version
+
+
       # You can test your matrix by printing the current Python version
       - name: Install dependencies
         run: |
