@@ -16,6 +16,7 @@ jobs:
           architecture: 'x64'
       - name: Install MiniZinc
         run: |
+            echo $PATH
             sudo apt-get update
             sudo apt-get install -y minizinc
       # You can test your matrix by printing the current Python version
