@@ -23,7 +23,6 @@ jobs:
           tar -xvzf MiniZincIDE-2.7.5-bundle-linux-x86_64.tgz
           sudo mv MiniZincIDE-2.7.5-bundle-linux-x86_64 /opt/minizinc
           echo "PATH=/opt/minizinc/bin:$PATH" >> $GITHUB_ENV
-            
 
       - name: Add MiniZinc to PATH
         run: echo "PATH=/usr/bin:$PATH" >> $GITHUB_ENV
@@ -31,6 +30,8 @@ jobs:
       - name: Verify MiniZinc Installation
         run: minizinc --version
 
+      - name: Install missing library
+        run: sudo apt-get install -y libegl1
 
       # You can test your matrix by printing the current Python version
       - name: Install dependencies
