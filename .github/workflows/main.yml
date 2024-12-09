@@ -14,11 +14,17 @@ jobs:
         with:
           python-version: '3.12'
           architecture: 'x64'
-      - name: Install MiniZinc
+
+
+
+      - name: Install specific version of MiniZinc
         run: |
-            echo $PATH
-            sudo apt-get update
-            sudo apt-get install -y minizinc
+          wget https://github.com/MiniZinc/MiniZincIDE/releases/download/2.7.5/MiniZincIDE-2.7.5-bundle-linux-x86_64.tgz
+          tar -xvzf MiniZincIDE-2.7.5-bundle-linux-x86_64.tgz
+          sudo mv MiniZincIDE-2.7.5-bundle-linux-x86_64 /opt/minizinc
+          echo "PATH=/opt/minizinc/bin:$PATH" >> $GITHUB_ENV
+            
+
       - name: Add MiniZinc to PATH
         run: echo "PATH=/usr/bin:$PATH" >> $GITHUB_ENV
       
