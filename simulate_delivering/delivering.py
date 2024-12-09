@@ -1,9 +1,13 @@
 from mesa import DataCollector, Model, space, time
 
-from scripts.optim_routes.mip_rider_to_vendor import MipRiderVendor
-from scripts.optim_routes.tsp import LocalSearch
-from scripts.optim_routes.utils import Point, orders_to_points, points_to_orders
-from scripts.utils import RiderGenerator, data_collector
+from simulate_delivering.optim_routes.mip_rider_to_vendor import MipRiderVendor
+from simulate_delivering.optim_routes.tsp import LocalSearch
+from simulate_delivering.optim_routes.utils import (
+    Point,
+    orders_to_points,
+    points_to_orders,
+)
+from simulate_delivering.utils import RiderGenerator, data_collector
 
 
 class Dispatcher(Model):

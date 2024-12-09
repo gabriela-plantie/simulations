@@ -1,6 +1,6 @@
 from ortools.linear_solver import pywraplp
 
-from scripts.optim_routes.utils import Point, length
+from simulate_delivering.optim_routes.utils import Point, length
 
 solver_status = {
     pywraplp.Solver.__dict__[status]: status

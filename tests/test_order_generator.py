@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from scripts.agents.orders import Order
-from scripts.agents.riders import Rider
-from scripts.delivering import Dispatcher
-from scripts.utils import OrderGenerator
+from simulate_delivering.agents.orders import Order
+from simulate_delivering.agents.riders import Rider
+from simulate_delivering.delivering import Dispatcher
+from simulate_delivering.utils import OrderGenerator
 
 
 def test_all_orders_should_be_assigned_when_free_riders():

@@ -1,6 +1,6 @@
 import numpy as np
 
-from scripts.agents.orders import Order
+from simulate_delivering.agents.orders import Order
 
 
 class Point:

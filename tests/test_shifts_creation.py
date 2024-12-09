@@ -1,6 +1,6 @@
 import pytest
 
-from scripts.shifts.create_shifts import CPShifts
+from optimize_shift_creation.create_shifts import CPShifts
 
 
 @pytest.mark.parametrize(

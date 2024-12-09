@@ -2,11 +2,11 @@ import random
 
 import pytest
 
-from scripts.agents.orders import Order
-from scripts.agents.riders import Rider
-from scripts.delivering import Dispatcher
-from scripts.optim_routes.tsp import LocalSearch
-from scripts.optim_routes.utils import Point, calculate_path_len, two_swap
+from simulate_delivering.agents.orders import Order
+from simulate_delivering.agents.riders import Rider
+from simulate_delivering.delivering import Dispatcher
+from simulate_delivering.optim_routes.tsp import LocalSearch
+from simulate_delivering.optim_routes.utils import Point, calculate_path_len, two_swap
 
 
 @pytest.mark.parametrize(

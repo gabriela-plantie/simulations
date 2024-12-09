@@ -1,10 +1,10 @@
-from scripts.optim_routes.utils import (
+from simulate_delivering.optim_routes.utils import (
     Point,
     calculate_distances_dict,
     calculate_path_len,
     initialize_route_with_logic_from_restaurant,
 )
-from scripts.utils import OrderGenerator
+from simulate_delivering.utils import OrderGenerator
 
 
 def test_create_orders():
