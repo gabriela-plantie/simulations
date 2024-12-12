@@ -5,3 +5,4 @@ __pycache__
 pruebas.ipynb
 .ipynb_checkpoints
 junit
+.DS_Store
