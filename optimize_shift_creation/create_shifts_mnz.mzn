@@ -27,8 +27,10 @@ array[SHIFT] of var LENGTH: length;
 
 array[TIME] of var int: active_riders_at_t;
 array[TIME] of var SLACK: slack; 
+var 0..max_shift: active_shifts;
+var 0..max(rider_demand)*times: slack_sum;
 
-var 0 .. max(rider_demand)*times: objective;
+
 
 
 
@@ -49,11 +51,37 @@ constraint forall(t in TIME)(
 constraint forall(s in SHIFT) (
 	if (length[s] > 0) then
 		(starts_at[s] + length[s] - 1 <= times)
-		
 		else starts_at[s] = times+1 
 		endif );
 
-constraint objective = sum(t in TIME)( abs(slack[t]));
-solve minimize objective;
 
-		
+% prioritize longer shifts
+
+
+
+% symmetry breaking
+
+% starts should be ordered
+constraint forall(i in 1..max_shift-1)(
+	starts_at[i] <= starts_at[i+1]
+	);
+
+% all non used shifts at the end
+constraint forall(s in 1..max_shift-1)(
+    (length[s] = 0 -> length[s+1] = 0)
+);
+
+
+% if shifts start at same time, their length should be ordered
+constraint forall(i, j in SHIFT where i < j)(
+    (if starts_at[i] == starts_at[j] then length[i] <= length[j] endif)
+);
+
+
+constraint active_shifts = sum(s in SHIFT)(length[s] > 0);
+constraint slack_sum = sum(t in TIME)(abs(slack[t]));
+
+
+
+
+solve minimize slack_sum * (max_shift +1) + active_shifts;

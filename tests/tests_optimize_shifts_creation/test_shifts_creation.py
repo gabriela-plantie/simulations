@@ -54,7 +54,9 @@ model_file = "optimize_shift_creation/create_shifts_mnz.mzn"
         # # 9 shifts of len 3 and startime 0 -> obj = 2
         (3, 3, [10, 9, 8], 2, {(0, 3): 9}),
         (2, 3, [1, 2, 2], 0, {(0, 3): 1, (1, 2): 1}),
-        # (2, 3, [2, 2, 1], 0, {(0, 2): 1, (0, 3): 1}),  # failing test
+        (2, 3, [2, 2, 1], 0, {(0, 2): 1, (0, 3): 1}),
+        (2, 3, [2, 2, 1, 2, 2], 0, {(0, 2): 2, (2, 3): 1, (3, 2): 1}),
+        (1, 2, [2, 2], 0, {(0, 2): 2}),  # prioritize longer shifts
     ],
 )
 def test_staffing_cp_mnz(
@@ -67,10 +69,6 @@ def test_staffing_cp_mnz(
     with open(model_file, "r") as file:
         model_text = file.read()
 
-    # estimated_rider_demand = [1,2,3]
-    # min_len = 3
-    # max_len= 3
-    # expected_objective_value = 0
     input_dict = {
         "min_len": min_len,
         "max_len": max_len,
@@ -80,10 +78,28 @@ def test_staffing_cp_mnz(
 
     data_text = minizinc_input(input_dict)
     result = run_model(model_text=[model_text, data_text], verbose=True)
-    assert result.objective == expected_objective_value
+    assert result.solution.slack_sum == expected_objective_value
     assert (
         format_output(
             [t - 1 for t in result.solution.starts_at], result.solution.length
         )
         == num_expected_shifts_by_init_and_len
     )
+
+    # symmetry assertions
+    assert all(
+        [
+            t_s1 <= t_s2
+            for t_s1, t_s2 in zip(
+                result.solution.starts_at[:-1], result.solution.starts_at[1:]
+            )
+        ]
+    ), "starts_should be ordered to reduce options"
+
+    assert all(
+        [
+            result.solution.length[i] <= result.solution.length[i + 1]
+            for i in range(len(estimated_rider_demand) - 1)
+            if result.solution.starts_at[i] == result.solution.starts_at[i + 1]
+        ]
+    ), "if 2 shifts have same start then lenghts should be ordered"
