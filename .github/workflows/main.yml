@@ -30,6 +30,9 @@ jobs:
       - name: Verify MiniZinc Installation
         run: minizinc --version
 
+      - name: Update apt-get
+        run: sudo apt-get update
+
       - name: Install missing library
         run: sudo apt-get install -y libegl1
 
