@@ -13,7 +13,7 @@ set of int: LENGTH = {0} union min_len..max_len;
 
 
 
-int: max_shift = ceil(max(t in TIME)(rider_demand[t]) * times /min_len);
+int: max_shift = ceil(max(t in TIME)(rider_demand[t]) * ceil(times/min_len));
         
 set of int: SHIFT = 1..max_shift;
 
@@ -61,15 +61,17 @@ constraint forall(s in SHIFT) (
 
 % symmetry breaking
 
+% all non used shifts at the end
+constraint forall(s in 1..max_shift-1)(
+    (length[s] = 0 -> length[s+1] = 0)
+);
+
+
 % starts should be ordered
 constraint forall(i in 1..max_shift-1)(
 	starts_at[i] <= starts_at[i+1]
 	);
 
-% all non used shifts at the end
-constraint forall(s in 1..max_shift-1)(
-    (length[s] = 0 -> length[s+1] = 0)
-);
 
 
 % if shifts start at same time, their length should be ordered
@@ -84,4 +86,17 @@ constraint slack_sum = sum(t in TIME)(abs(slack[t]));
 
 
 
-solve minimize slack_sum * (max_shift +1) + active_shifts;
+% dominance
+% no puede haber 2 consecutivos de 1, si hay posibles de 2
+% no puede haber 3 consecutivos de 1, si hay posibles de 3
+% no puede haber 2 consecutivos de 2, si hay posibles de 4
+
+constraint forall(i in 1..max_shift-1)(
+	if (min_len <= 2) /\ (2 <= max_len) /\ 
+	(starts_at[i] + 1 == starts_at[i+1]) 
+	/\ (length[i] = 1) then (length[i+1] > 1)
+	endif  
+	);
+
+
+solve minimize slack_sum * (max_shift + 1) + active_shifts;
