@@ -55,9 +55,15 @@ model_file = "optimize_shift_creation/create_shifts_mnz.mzn"
         (3, 3, [10, 9, 8], 2, {(0, 3): 9}),
         (2, 3, [1, 2, 2], 0, {(0, 3): 1, (1, 2): 1}),
         (2, 3, [2, 2, 1], 0, {(0, 2): 1, (0, 3): 1}),
-        (2, 3, [2, 2, 1, 2, 2], 0, {(0, 2): 2, (2, 3): 1, (3, 2): 1}),
+        (2, 3, [2, 2, 1, 2, 2], 0, {(0, 3): 1, (0, 2): 1, (3, 2): 2}),
         (1, 2, [2, 2], 0, {(0, 2): 2}),  # prioritize longer shifts
-        # (1, 2, [10] * 10, 0, {(0, 10): 10}),  # test speed -> dominance
+        (2, 2, [1] * 10, 0, {(0, 2): 1, (2, 2): 1, (4, 2): 1, (6, 2): 1, (8, 2): 1}),
+        (2, 2, [2] * 10, 0, {(0, 2): 2, (2, 2): 2, (4, 2): 2, (6, 2): 2, (8, 2): 2}),
+        (1, 2, [2] * 10, 0, {(0, 2): 2, (2, 2): 2, (4, 2): 2, (6, 2): 2, (8, 2): 2}),
+        # (2, 2, [10] * 10, 0, {(0, 2): 10, (2, 2): 10, (4, 2): 10, (6, 2): 10,
+        # (8, 2): 10}), # test speed -> symmetry
+        # (1, 2, [10] * 10, 0, {(0, 2): 10, (2, 2): 10, (4, 2): 10, (6, 2): 10,
+        # (8, 2): 10}), # test speed -> dominance
     ],
 )
 def test_staffing_cp_mnz(
@@ -78,7 +84,7 @@ def test_staffing_cp_mnz(
     }
 
     data_text = minizinc_input(input_dict)
-    result = run_model(model_text=[model_text, data_text], verbose=True)
+    result = run_model(model_text=[model_text, data_text], timeout=2, verbose=True)
     assert result.solution.slack_sum == expected_objective_value
     assert (
         format_output(
@@ -99,8 +105,8 @@ def test_staffing_cp_mnz(
 
     assert all(
         [
-            result.solution.length[i] <= result.solution.length[i + 1]
-            for i in range(len(estimated_rider_demand) - 1)
+            result.solution.length[i] >= result.solution.length[i + 1]
+            for i in range(len(result.solution.length) - 1)
             if result.solution.starts_at[i] == result.solution.starts_at[i + 1]
         ]
-    ), "if 2 shifts have same start then lenghts should be ordered"
+    ), "if 2 shifts have same start then lenghts should be ordered desc"
