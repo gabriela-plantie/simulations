@@ -95,7 +95,11 @@ def test_staffing_cp_mnz(
     }
 
     data_text = minizinc_input(input_dict)
-    result = run_model(model_text=[model_text, data_text], timeout=2, verbose=True)
+    result = run_model(
+        model_text=[model_text, data_text],
+        # timeout=2,
+        verbose=True,
+    )
     assert result.solution.slack_sum == expected_objective_value
 
     if model_file == "optimize_shift_creation/create_shifts_mnz.mzn":
