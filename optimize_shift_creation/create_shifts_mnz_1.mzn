@@ -37,12 +37,6 @@ var 0..max(rider_demand)*times: slack_sum;
 
 
 
-set of int: QSHIFT = 0..max_shift; 
-array[TIME, LENGTH] of var QSHIFT: q_shifts; 
-constraint forall(t in TIME)( 
-	active_riders_at_t[t] = sum(i in 1..t, l in LENGTH)(if i + l - 1 >= t then q_shifts[i,l] else 0 endif ));
-	
-
 
 %in each time sum shifts covering 
 constraint forall(t in TIME)(

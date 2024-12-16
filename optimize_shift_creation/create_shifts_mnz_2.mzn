@@ -15,7 +15,7 @@ set of int: DEMAND = 1..max(rider_demand);
 
 int: max_shift = ceil(max(t in TIME)(rider_demand[t]) * ceil(times/min_len));
         
-set of int: QSHIFT = 0..max_shift;
+set of int: QSHIFT = 0..max(rider_demand);
 
 set of int: SLACK = -max(rider_demand)..max(rider_demand);
 
@@ -33,17 +33,31 @@ var 0..max(rider_demand)*times: slack_sum;
 
 
 constraint forall(t in TIME)( 
-	active_riders_at_t[t] = sum(i in 1..t, l in LENGTH)(if i + l - 1 >= t then q_shifts[i,l] else 0 endif ));
+	active_riders_at_t[t] = sum(i in 1..t, l in LENGTH)(if i + l - 1 >= t then q_shifts[i,l] else 0 endif)
+	);
+
 	
-		
+constraint forall(t in TIME, l in LENGTH)(q_shifts[t, l] <= rider_demand[t] * 1.2);	 % upper bound
+
+constraint forall(t in TIME)(active_riders_at_t[t] <= rider_demand[t] * 1.2);	 % upper bound
+constraint forall(t in TIME)(active_riders_at_t[t] >= rider_demand[t] * 0.8);	% lower bound  % solo no ayuda
+				
 constraint active_shifts = sum(t in TIME, l in LENGTH)(q_shifts[t,l]);
 				
 constraint forall(t in TIME)(
 		rider_demand[t] =  active_riders_at_t[t] + slack[t] 
 		);
 		
+		
+constraint forall(t in TIME, l in LENGTH)(if t + l - 1 > times then q_shifts[t, l]=0 endif);
+
 
 constraint slack_sum = sum(t in TIME)(abs(slack[t]));
+
+
+
+constraint forall(t in 1..times-1)(if  2 >= min_len /\ 2 <= max_len /\ q_shifts[t + 1, 1] = 1 then q_shifts[t, 1] = 0 endif);
+constraint forall(t in 1..times-2)(if  2 >= min_len /\ 2 <= max_len /\ q_shifts[t + 2, 1] = 1 then q_shifts[t, 1] = 0 /\ q_shifts[t+1, 1] = 0 endif);
 
 
 

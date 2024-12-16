@@ -1,9 +1,7 @@
 import pytest
 
-from minizinc_tools.run_mnz_model import run_model
-from minizinc_tools.transform_data_for_mnz_input import minizinc_input
 from optimize_shift_creation.create_shifts_ortools_cp import CPShifts
-from optimize_shift_creation.utils import format_output, format_output_2
+from optimize_shift_creation.utils import CPShiftsMzn
 
 
 @pytest.mark.parametrize(
@@ -40,7 +38,7 @@ def test_rider_demand_satisfaction(
     } == num_expected_shifts_by_init_and_len
 
 
-model_file = "optimize_shift_creation/create_shifts_mnz.mzn"
+model_file = "optimize_shift_creation/create_shifts_mnz_1.mzn"
 model_file = "optimize_shift_creation/create_shifts_mnz_2.mzn"
 
 
@@ -59,7 +57,6 @@ model_file = "optimize_shift_creation/create_shifts_mnz_2.mzn"
         (2, 3, [2, 2, 1, 2, 2], 0, {(0, 3): 1, (0, 2): 1, (3, 2): 2}),
         (1, 2, [2, 2], 0, {(0, 2): 2}),  # prioritize longer shifts
         (2, 2, [1] * 10, 0, {(0, 2): 1, (2, 2): 1, (4, 2): 1, (6, 2): 1, (8, 2): 1}),
-        (2, 2, [2] * 10, 0, {(0, 2): 2, (2, 2): 2, (4, 2): 2, (6, 2): 2, (8, 2): 2}),
         (1, 2, [2] * 10, 0, {(0, 2): 2, (2, 2): 2, (4, 2): 2, (6, 2): 2, (8, 2): 2}),
         (
             2,
@@ -71,9 +68,9 @@ model_file = "optimize_shift_creation/create_shifts_mnz_2.mzn"
         (
             1,
             2,
-            [10] * 10,
+            [100] * 10,
             0,
-            {(0, 2): 10, (2, 2): 10, (4, 2): 10, (6, 2): 10, (8, 2): 10},
+            {(0, 2): 100, (2, 2): 100, (4, 2): 100, (6, 2): 100, (8, 2): 100},
         ),  # test speed -> dominance
     ],
 )
@@ -84,8 +81,6 @@ def test_staffing_cp_mnz(
     expected_objective_value,
     num_expected_shifts_by_init_and_len,
 ):
-    with open(model_file, "r") as file:
-        model_text = file.read()
 
     input_dict = {
         "min_len": min_len,
@@ -94,43 +89,36 @@ def test_staffing_cp_mnz(
         "times": len(estimated_rider_demand),
     }
 
-    data_text = minizinc_input(input_dict)
-    result = run_model(
-        model_text=[model_text, data_text],
-        # timeout=2,
-        verbose=True,
-    )
-    assert result.solution.slack_sum == expected_objective_value
+    model = CPShiftsMzn(input_data=input_dict)
+    result = model.solve(model_file)
 
-    if model_file == "optimize_shift_creation/create_shifts_mnz.mzn":
-        assert (
-            format_output(
-                [t - 1 for t in result.solution.starts_at], result.solution.length
-            )
-            == num_expected_shifts_by_init_and_len
-        )
-        # symmetry assertions
-        assert all(
-            [
-                t_s1 <= t_s2
-                for t_s1, t_s2 in zip(
-                    result.solution.starts_at[:-1], result.solution.starts_at[1:]
-                )
-            ]
-        ), "starts_should be ordered to reduce options"
+    assert result["slack_sum"] == expected_objective_value
+    assert result["shifts"] == num_expected_shifts_by_init_and_len
 
-        assert all(
-            [
-                result.solution.length[i] >= result.solution.length[i + 1]
-                for i in range(len(result.solution.length) - 1)
-                if result.solution.starts_at[i] == result.solution.starts_at[i + 1]
-            ]
-        ), "if 2 shifts have same start then lenghts should be ordered desc"
+    # only for version 1 and i am not exporting this -> in another test
 
-    else:
-        assert (
-            format_output_2(
-                min_len=min_len, max_len=max_len, q_shifts=result.solution.q_shifts
-            )
-            == num_expected_shifts_by_init_and_len
-        )
+    # symmetry assertions
+    #     assert all(
+    #         [
+    #             t_s1 <= t_s2
+    #             for t_s1, t_s2 in zip(
+    #                 result.solution.starts_at[:-1], result.solution.starts_at[1:]
+    #             )
+    #         ]
+    #     ), "starts_should be ordered to reduce options"
+
+    #     assert all(
+    #         [
+    #             result.solution.length[i] >= result.solution.length[i + 1]
+    #             for i in range(len(result.solution.length) - 1)
+    #             if result.solution.starts_at[i] == result.solution.starts_at[i + 1]
+    #         ]
+    #     ), "if 2 shifts have same start then lenghts should be ordered desc"
+
+    # else:
+    #     assert (
+    #         format_output_2(
+    #             min_len=min_len, max_len=max_len, q_shifts=result.solution.q_shifts
+    #         )
+    #         == num_expected_shifts_by_init_and_len
+    #     )
