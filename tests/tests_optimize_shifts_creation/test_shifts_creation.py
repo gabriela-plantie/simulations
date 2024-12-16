@@ -56,6 +56,33 @@ model_file = "optimize_shift_creation/create_shifts_mnz_2.mzn"
         (2, 3, [2, 2, 1], 0, {(0, 2): 1, (0, 3): 1}),
         (2, 3, [2, 2, 1, 2, 2], 0, {(0, 3): 1, (0, 2): 1, (3, 2): 2}),
         (1, 2, [2, 2], 0, {(0, 2): 2}),  # prioritize longer shifts
+    ],
+)
+def test_staffing_cp_mnz_logic(
+    min_len,
+    max_len,
+    estimated_rider_demand,
+    expected_objective_value,
+    num_expected_shifts_by_init_and_len,
+):
+    input_dict = {
+        "min_len": min_len,
+        "max_len": max_len,
+        "rider_demand": estimated_rider_demand,
+        "times": len(estimated_rider_demand),
+    }
+
+    model = CPShiftsMzn(input_data=input_dict)
+    result = model.solve(model_file)
+
+    assert result["slack_sum"] == expected_objective_value
+    assert result["shifts"] == num_expected_shifts_by_init_and_len
+
+
+@pytest.mark.parametrize(
+    "min_len, max_len, estimated_rider_demand,"
+    "expected_objective_value, num_expected_shifts_by_init_and_len",
+    [
         (2, 2, [1] * 10, 0, {(0, 2): 1, (2, 2): 1, (4, 2): 1, (6, 2): 1, (8, 2): 1}),
         (1, 2, [2] * 10, 0, {(0, 2): 2, (2, 2): 2, (4, 2): 2, (6, 2): 2, (8, 2): 2}),
         (
@@ -74,7 +101,7 @@ model_file = "optimize_shift_creation/create_shifts_mnz_2.mzn"
         ),  # test speed -> dominance
     ],
 )
-def test_staffing_cp_mnz(
+def test_staffing_cp_mnz_performance(
     min_len,
     max_len,
     estimated_rider_demand,
