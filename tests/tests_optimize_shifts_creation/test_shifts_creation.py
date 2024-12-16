@@ -1,7 +1,7 @@
 import pytest
 
+from optimize_shift_creation.create_shifts_mzn_cp import CPShiftsMzn
 from optimize_shift_creation.create_shifts_ortools_cp import CPShifts
-from optimize_shift_creation.utils import CPShiftsMzn
 
 
 @pytest.mark.parametrize(
