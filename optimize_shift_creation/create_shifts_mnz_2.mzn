@@ -87,7 +87,7 @@ constraint if min_len < 5  /\ 5 <= max_len then
 % sum of length of consecutive shifts > max len (since I am prioritizing longer shifts)
 constraint forall(t in 1..times-1)(
 		forall (l1, l2 in LENGTH)(
-			if q_shifts[t, l1] > 0 /\ q_shifts[t+1, l2] > 0 
+			if q_shifts[t, l1] > 0 /\ q_shifts[t+l1, l2] > 0 
 			then l1 + l2 > max_len
 			endif)
 			);
