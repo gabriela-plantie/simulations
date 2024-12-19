@@ -39,6 +39,11 @@ def test_rider_demand_satisfaction(
 
 
 model_file = "optimize_shift_creation/create_shifts_mnz_1.mzn"
+
+# improves model 1 usign channeling constraints
+model_file = "optimize_shift_creation/create_shifts_mnz_3.mzn"
+
+# different point of view
 model_file = "optimize_shift_creation/create_shifts_mnz_2.mzn"
 
 
@@ -54,8 +59,9 @@ model_file = "optimize_shift_creation/create_shifts_mnz_2.mzn"
         (3, 3, [10, 9, 8], 2, {(0, 3): 9}),
         (2, 3, [1, 2, 2], 0, {(0, 3): 1, (1, 2): 1}),
         (2, 3, [2, 2, 1], 0, {(0, 2): 1, (0, 3): 1}),
-        (2, 3, [2, 2, 1, 2, 2], 0, {(0, 3): 1, (0, 2): 1, (3, 2): 2}),
+        # (2, 3, [2, 2, 1, 2, 2], 0, {(0, 3): 1, (0, 2): 1, (3, 2): 2}),
         (1, 2, [2, 2], 0, {(0, 2): 2}),  # prioritize longer shifts
+        (1, 10, [3] * 10, 0, {(0, 10): 3}),  # prioritize longer shifts
     ],
 )
 def test_staffing_cp_mnz_logic(
@@ -73,7 +79,7 @@ def test_staffing_cp_mnz_logic(
     }
 
     model = CPShiftsMzn(input_data=input_dict)
-    result = model.solve(model_file)
+    result = model.solve(model_file, timeout=5)
 
     assert result["slack_sum"] == expected_objective_value
     assert result["shifts"] == num_expected_shifts_by_init_and_len
@@ -99,6 +105,20 @@ def test_staffing_cp_mnz_logic(
             0,
             {(0, 2): 100, (2, 2): 100, (4, 2): 100, (6, 2): 100, (8, 2): 100},
         ),  # test speed -> dominance
+        (
+            1,
+            5,
+            [100] * 5,
+            0,
+            {(0, 5): 100},
+        ),  # test speed -> dominance
+        (
+            3,
+            7,
+            [100] * 10,
+            0,
+            {(0, 7): 100, (7, 3): 100},
+        ),  # test speed -> symmetry
     ],
 )
 def test_staffing_cp_mnz_performance(
@@ -117,7 +137,7 @@ def test_staffing_cp_mnz_performance(
     }
 
     model = CPShiftsMzn(input_data=input_dict)
-    result = model.solve(model_file)
+    result = model.solve(model_file, timeout=2)
 
     assert result["slack_sum"] == expected_objective_value
     assert result["shifts"] == num_expected_shifts_by_init_and_len

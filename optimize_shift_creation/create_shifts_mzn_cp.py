@@ -31,6 +31,8 @@ class CPShiftsMzn:
             return self._format_output_1(result)
         elif model_version == 2:
             return self._format_output_2(result)
+        elif model_version == 3:
+            return self._format_output_1(result)
         else:
             raise NotImplementedError
 

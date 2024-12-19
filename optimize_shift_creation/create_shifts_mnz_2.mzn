@@ -49,20 +49,73 @@ constraint forall(t in TIME)(
 		);
 		
 		
-constraint forall(t in TIME, l in LENGTH)(if t + l - 1 > times then q_shifts[t, l]=0 endif);
+constraint forall(t in TIME, l in LENGTH)(if t + l - 1 > times then q_shifts[t, l] = 0 endif);
 
 
 constraint slack_sum = sum(t in TIME)(abs(slack[t]));
 
 
 
-constraint forall(t in 1..times-1)(if  2 >= min_len /\ 2 <= max_len /\ q_shifts[t + 1, 1] = 1 then q_shifts[t, 1] = 0 endif);
-constraint forall(t in 1..times-2)(if  2 >= min_len /\ 2 <= max_len /\ q_shifts[t + 2, 1] = 1 then q_shifts[t, 1] = 0 /\ q_shifts[t+1, 1] = 0 endif);
+% dominance
+
+% for 2 in len
+constraint if min_len < 2  /\ 2 <= max_len  then
+	forall (t in 1..times-2)(sum(i in t..t+2)(q_shifts[t, 1] > 0 ) < 2) % cannot be 2 consecutive 1
+					endif;
+					
+% for 3 in len
+constraint if min_len < 3  /\ 3 <= max_len  then
+	forall (t in 1..times-3)(sum(i in t..t+3)(q_shifts[t, 1] > 0 ) < 3) % cannot be 3 consecutive 1
+	/\
+	forall (t in 1..times-3)(sum(i in t..t+2)(bool2int(q_shifts[t, 1] > 0) + bool2int(q_shifts[t+1, 2] > 0) ) < 2) % also cannot be  1,2 
+	/\
+	forall (t in 1..times-3)(sum(i in t..t+2)(bool2int(q_shifts[t, 2] > 0) + bool2int(q_shifts[t+1, 1] > 0) ) < 2) % also cannot be  2,1 
+					endif;
+
+% for 4 in len
+constraint if min_len < 4  /\ 4 <= max_len then
+	forall (t in 1..times-4)(sum(i in t..t+4)(q_shifts[t, 1] > 0 ) < 4) % cannot be 4 consecutive 1
+	/\
+	forall (t in 1..times-2)(sum(i in t..t+2)(q_shifts[t, 2] > 0 ) < 4) % cannot be 2 consecutive 2
+					endif;
+					
+constraint if min_len < 5  /\ 5 <= max_len then
+	forall (t in 1..times-5)(sum(i in t..t+5)(q_shifts[t, 1] > 0 ) < 5)
+					endif;
 
 
+% sum of length of consecutive shifts > max len (since I am prioritizing longer shifts)
+constraint forall(t in 1..times-1)(
+		forall (l1, l2 in LENGTH)(
+			if q_shifts[t, l1] > 0 /\ q_shifts[t+1, l2] > 0 
+			then l1 + l2 > max_len
+			endif)
+			);
 
-%constraint starts_at[1] = 1;
+
+constraint forall(t in 1.. times-1)(
+	forall(l1, l2 in LENGTH)(
+		if q_shifts[t, l1] > 0 /\ q_shifts[t+l1, l2] > 0 then l1 >= l2 endif )
+		);
+		
+		
+		
+% si puede ser lent=6, lent+1=4 o lent=7, lent+1=3 -> 7,3
+constraint forall(t in 1.. times-1)(
+	forall(l1, l2 in LENGTH)(
+		if q_shifts[t, l1] > 0 /\ q_shifts[t+l1, l2] > 0 /\ l1 + l2 == max_len + min_len 
+		then l1 = max_len /\ l2 = min_len endif )
+		);
+
+% constraint starts_at[1] = 1;
 	
+% casos de simetria para resolver
+% 10 times , always 100 demand, shifts 3..7 -> of len 7 and 3 at 1 and 7 or of len 5 at 1 and 5    
+% hacer una variable en que t estan las longitudes -> set lengths_in_t
+% longitudes de suvesivos van decreciendo o son iguales
+
+
+
 
 
 solve minimize slack_sum * (max_shift + 1) + active_shifts;
