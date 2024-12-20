@@ -40,7 +40,7 @@ array[TIME] of var SLACK: slack;
 
 
 var 0..max_shift: active_shifts;
-var 0..max(rider_demand)*times: slack_sum;
+var 0..max(rider_demand) * max(rider_demand)*times: slack_sum;
 
 
 

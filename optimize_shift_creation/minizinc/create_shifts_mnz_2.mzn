@@ -19,6 +19,7 @@ set of int: QSHIFT = 0..max(rider_demand);
 
 set of int: SLACK = -max(rider_demand)..max(rider_demand);
 
+int: min_rider_demand = min(rider_demand);
 
 array[TIME, LENGTH] of var QSHIFT: q_shifts; 
 
@@ -29,36 +30,43 @@ array[TIME] of var SLACK: slack;
 
 
 var 0..max_shift: active_shifts;
-var 0..max(rider_demand)*times: slack_sum;
+var 0..max(rider_demand)*max(rider_demand)*times: slack_sum;
+
+
+% definition		
+constraint forall(t in TIME, l in LENGTH)(if t + l - 1 > times then q_shifts[t, l] = 0 endif);
+
 
 
 constraint forall(t in TIME)( 
 	active_riders_at_t[t] = sum(i in 1..t, l in LENGTH)(if i + l - 1 >= t then q_shifts[i,l] else 0 endif)
 	);
 
-	
-constraint forall(t in TIME, l in LENGTH)(q_shifts[t, l] <= rider_demand[t] * 1.2);	 % upper bound
 
-constraint forall(t in TIME)(active_riders_at_t[t] <= rider_demand[t] * 1.2);	 % upper bound
-constraint forall(t in TIME)(active_riders_at_t[t] >= rider_demand[t] * 0.8);	% lower bound  % solo no ayuda
+% % to reduce space search		
+constraint forall(t in TIME, l in LENGTH)(q_shifts[t, l] <= max(i in max(1,t-l)..min(times,t+l))(rider_demand[i]));	 % upper bound
+constraint forall(t in TIME)(active_riders_at_t[t] <= max(i in max(1,t-max_len)..min(times,t+max_len))(rider_demand[i]));	 % upper bound
+constraint forall(t in TIME)(active_riders_at_t[t] >= min(i in max(1,t-max_len)..min(times,t+max_len))(rider_demand[i]));	% lower bound  % durante la busqueda, como se pasa del times 1_shifts deberia ser 0 pero active riders at t >= a algo ????
+
 				
+								
+												
+																				
 constraint active_shifts = sum(t in TIME, l in LENGTH)(q_shifts[t,l]);
 				
 constraint forall(t in TIME)(
 		rider_demand[t] =  active_riders_at_t[t] + slack[t] 
 		);
 		
-		
-constraint forall(t in TIME, l in LENGTH)(if t + l - 1 > times then q_shifts[t, l] = 0 endif);
 
-
-constraint slack_sum = sum(t in TIME)(abs(slack[t]));
+%constraint slack_sum = sum(t in TIME)(abs(slack[t]));
+constraint slack_sum = sum(t in TIME)((slack[t]) * (slack[t]) );
 
 
 
 % dominance
 
-% for 2 in len
+%for 2 in len
 constraint if min_len < 2  /\ 2 <= max_len  then
 	forall (t in 1..times-2)(sum(i in t..t+2)(q_shifts[t, 1] > 0 ) < 2) % cannot be 2 consecutive 1
 					endif;
@@ -84,6 +92,7 @@ constraint if min_len < 5  /\ 5 <= max_len then
 					endif;
 
 
+
 % sum of length of consecutive shifts > max len (since I am prioritizing longer shifts)
 constraint forall(t in 1..times-1)(
 		forall (l1, l2 in LENGTH)(
@@ -93,6 +102,7 @@ constraint forall(t in 1..times-1)(
 			);
 
 
+% consecutives shifts should have len sorted
 constraint forall(t in 1.. times-1)(
 	forall(l1, l2 in LENGTH)(
 		if q_shifts[t, l1] > 0 /\ q_shifts[t+l1, l2] > 0 then l1 >= l2 endif )
@@ -110,7 +120,7 @@ constraint forall(t in 1.. times-1)(
 
 
 
-
+%constraint active_riders_at_t = [2, 2, 4, 4];
 
 % constraint starts_at[1] = 1;
 	

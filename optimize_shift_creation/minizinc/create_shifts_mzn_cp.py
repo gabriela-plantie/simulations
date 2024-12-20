@@ -18,12 +18,16 @@ class CPShiftsMzn:
             timeout=timeout,
             verbose=True,
         )
+        if result.status.name == "UNSATISFIABLE":
+            print("UNSATISFIABLE")
+            print(self.input_data)
 
         model_version = int(model_file.split("/")[-1].split(".")[0].split("_")[-1])
         return {
             "objective_value": result.objective,
             "slack_sum": result.solution.slack_sum,
             "shifts": self._format_output(result=result, model_version=model_version),
+            "status": result.status.name,
         }
 
     def _format_output(self, result, model_version):

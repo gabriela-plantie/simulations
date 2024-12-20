@@ -33,7 +33,7 @@ array[TIME] of var SLACK: slack;
 
 
 var 0..max_shift: active_shifts;
-var 0..max(rider_demand)*times: slack_sum;
+var 0..max(rider_demand)*max(rider_demand)*times: slack_sum;
 
 
 
@@ -105,7 +105,7 @@ constraint forall(i, j in SHIFT where i < j)(
 
 
 constraint active_shifts = sum(s in SHIFT)(length[s] > 0);
-constraint slack_sum = sum(t in TIME)(abs(slack[t]));
+constraint slack_sum = sum(t in TIME)(slack[t] * slack[t]);
 
 
 
