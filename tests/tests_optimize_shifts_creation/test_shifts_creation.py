@@ -64,9 +64,9 @@ model_file = f"{path}/create_shifts_mnz_2.mzn"
         # (2, 3, [2, 2, 1, 2, 2], 0, {(0, 3): 1, (0, 2): 1, (3, 2): 2}),
         (1, 2, [2, 2], 0, {(0, 2): 2}),  # prioritize longer shifts
         (1, 10, [3] * 10, 0, {(0, 10): 3}),  # prioritize longer shifts
-        # cases found by random search
+        # cases found by random search:
         (2, 2, [9, 8, 4, 2], 3, {(0, 2): 8, (2, 2): 3}),  # fixed
-        (2, 2, [2, 3, 0, 9], 1 + 25 + 16, {(0, 2): 2, (2, 2): 4}),  # failing
+        (2, 2, [2, 3, 0, 9], 1 + 25 + 16, {(0, 2): 2, (2, 2): 4}),  # fixed
     ],
 )
 def test_staffing_cp_mnz_logic(
@@ -131,6 +131,9 @@ def test_staffing_cp_mnz_logic(
             0,
             {(0, 7): 100, (7, 7): 100, (14, 6): 100},
         ),  # test speed -> symmetry
+        # cases found by random search:
+        # (3, 4, [20, 98, 14, 180, 104, 145], 0 , {(0,3):70, (3,3): 120}),
+        # does not reach optimal in 25 secs
     ],
 )
 def test_staffing_cp_mnz_performance(
@@ -187,7 +190,7 @@ def tests_random_shifts():
     min_len = np.random.randint(1, 5)
     max_len = max(min_len, np.random.randint(1, 10))
     estimated_rider_demand = [
-        np.random.randint(0, 20) for _ in range(np.random.randint(1, 10))
+        np.random.randint(0, 200) for _ in range(np.random.randint(1, 10))
     ]
 
     input_dict = {
@@ -196,7 +199,9 @@ def tests_random_shifts():
         "rider_demand": estimated_rider_demand,
         "times": len(estimated_rider_demand),
     }
-
+    print(input_dict)
     model = CPShiftsMzn(input_data=input_dict)
     result = model.solve(model_file, timeout=10)
-    assert result["status"] != "UNSATISFIABLE"
+
+    assert result["status"] != "UNSATISFIABLE", f"input_dict: {input_dict}"
+    # assert result["status"] == "OPTIMAL_SOLUTION", f"input_dict: {input_dict}"
