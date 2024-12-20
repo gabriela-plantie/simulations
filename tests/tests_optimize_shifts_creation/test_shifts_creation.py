@@ -1,7 +1,7 @@
 import pytest
 
-from optimize_shift_creation.create_shifts_mzn_cp import CPShiftsMzn
-from optimize_shift_creation.create_shifts_ortools_cp import CPShifts
+from optimize_shift_creation.minizinc.create_shifts_mzn_cp import CPShiftsMzn
+from optimize_shift_creation.ortools.create_shifts_ortools_cp import CPShifts
 
 
 @pytest.mark.parametrize(
@@ -38,13 +38,14 @@ def test_rider_demand_satisfaction(
     } == num_expected_shifts_by_init_and_len
 
 
-model_file = "optimize_shift_creation/create_shifts_mnz_1.mzn"
+path = "optimize_shift_creation/minizinc"
+model_file = f"{path}/create_shifts_mnz_1.mzn"
 
 # improves model 1 usign channeling constraints
-model_file = "optimize_shift_creation/create_shifts_mnz_3.mzn"
+model_file = f"{path}/create_shifts_mnz_3.mzn"
 
 # different point of view
-model_file = "optimize_shift_creation/create_shifts_mnz_2.mzn"
+model_file = f"{path}/create_shifts_mnz_2.mzn"
 
 
 @pytest.mark.parametrize(
