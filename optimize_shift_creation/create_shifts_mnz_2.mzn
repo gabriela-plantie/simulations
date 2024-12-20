@@ -107,6 +107,11 @@ constraint forall(t in 1.. times-1)(
 		then l1 = max_len /\ l2 = min_len endif )
 		);
 
+
+
+
+
+
 % constraint starts_at[1] = 1;
 	
 % casos de simetria para resolver
@@ -116,9 +121,19 @@ constraint forall(t in 1.. times-1)(
 
 
 
+%solve minimize slack_sum * (max_shift + 1) + active_shifts;
+
+%ann: varsel = input_order; 
+%ann: varsel = first_fail; 
+ann: varsel = smallest; 
+%ann: varsel = largest;
+ann: valsel = indomain_min; 
+%ann: valsel = indomain_max; 
+%ann: valsel = indomain_median; 
+%ann: valsel = indomain_random; 
 
 
-solve minimize slack_sum * (max_shift + 1) + active_shifts;
 
-
+solve :: int_search(q_shifts, varsel, valsel)
+      minimize slack_sum * (max_shift + 1) + active_shifts;
 

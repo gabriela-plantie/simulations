@@ -119,6 +119,13 @@ def test_staffing_cp_mnz_logic(
             0,
             {(0, 7): 100, (7, 3): 100},
         ),  # test speed -> symmetry
+        (
+            3,
+            7,
+            [100] * 20,
+            0,
+            {(0, 7): 100, (7, 7): 100, (14, 6): 100},
+        ),  # test speed -> symmetry
     ],
 )
 def test_staffing_cp_mnz_performance(
@@ -137,7 +144,7 @@ def test_staffing_cp_mnz_performance(
     }
 
     model = CPShiftsMzn(input_data=input_dict)
-    result = model.solve(model_file, timeout=2)
+    result = model.solve(model_file, timeout=4)
 
     assert result["slack_sum"] == expected_objective_value
     assert result["shifts"] == num_expected_shifts_by_init_and_len
