@@ -73,9 +73,15 @@ constraint forall(s in SHIFT) (
 
 constraint forall(s in SHIFT) (
 	(not active_shift[s]) <-> (starts_at[s] == times + 1)	
+
 	);
 
 
+
+constraint forall(s in SHIFT) (
+	(not active_shift[s]) <-> (length[s] == 0)	
+
+	);
 
 
 % constraint cumulative(starts_at, length, [1| i in 1..max_shift], rider_demand);
@@ -107,7 +113,7 @@ constraint forall(i, j in SHIFT where i < j)(
 
 
 constraint active_shifts = sum(s in SHIFT)(active_shift[s]);
-constraint slack_sum = sum(t in TIME)(abs(slack[t]));
+constraint slack_sum = sum(t in TIME)(slack[t]*slack[t]);
 
 
 
@@ -172,6 +178,8 @@ constraint forall (s in SHIFT)(
 	);
 
 
+
+
 array[TIME] of var set of SHIFT_0: shifts_at_t;
 constraint forall(t in TIME)(
 	shifts_at_t[t] = {
@@ -180,6 +188,9 @@ constraint forall(t in TIME)(
 			)
 		then s else 0 endif | s in SHIFT
 		} diff {0});
+
+
+
 
 
 constraint inverse_set(
@@ -198,6 +209,11 @@ array[SHIFT] of var bool: active_shift;
 
 constraint forall(s in SHIFT)(active_shift[s] = (length[s] > 0));
 
+
+% include "fzn_link_set_to_booleans.mzn";
+% %  s : i in s<-> b [ i ].
+% % shifts_at_t: {s1, s2, ..}  <-> active_shift[s1]
+% constraint fzn_link_set_to_booleans(shifts_at_t, active_shift);
 
 
 %  cumulative(array [int] of var int: s,  # start_at

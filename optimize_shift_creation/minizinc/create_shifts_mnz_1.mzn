@@ -69,7 +69,7 @@ constraint forall(s in SHIFT) (
 
 
 
-% symmetry breaking
+% symmetry breaking -------------------------
 
 % all non used shifts at the end
 constraint forall(s in 1..max_shift-1)(

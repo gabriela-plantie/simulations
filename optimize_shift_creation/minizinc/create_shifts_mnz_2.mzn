@@ -64,7 +64,7 @@ constraint slack_sum = sum(t in TIME)((slack[t]) * (slack[t]) );
 
 
 
-% dominance
+% dominance ------------
 
 %for 2 in len
 constraint if min_len < 2  /\ 2 <= max_len  then
