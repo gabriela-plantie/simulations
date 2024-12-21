@@ -144,10 +144,14 @@ class CPShifts:
         print(f"slacks in t :{[solver.value(r) for r in slacks]}")
         print(f"abs slacks in t :{[solver.value(r) for r in abs_slacks]}")
 
-        sol = self.format_output(
-            solver=solver, t_shifts=t_shifts, len_shifts=len_shifts
+        sol = self._format_output(
+            t_shifts=[solver.Value(s) for s in t_shifts],
+            len_shifts=[solver.Value(s) for s in len_shifts],
         )
-        return solver.objective_value, Counter(sol)
+        return solver.objective_value, sol
+
+    def _format_output(self, t_shifts, len_shifts):
+        return Counter([(t, l) for t, l in zip(t_shifts, len_shifts) if l > 0])
 
     def create_shift_variables(self, max_len, min_len, times, max_total_shifts, model):
         """
@@ -317,16 +321,6 @@ class CPShifts:
             model.Add(abs_slacks[t] >= slacks[t])
             model.Add(abs_slacks[t] >= -slacks[t])
         return abs_slacks
-
-    def format_output(self, t_shifts, len_shifts, solver):
-        sol = list(
-            zip(
-                [solver.Value(s) for s in t_shifts],
-                [solver.Value(s) for s in len_shifts],
-            )
-        )
-        print(sol)
-        return sol
 
 
 class ConstraintInspector(cp_model.CpSolverSolutionCallback):

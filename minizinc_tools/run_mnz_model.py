@@ -1,8 +1,10 @@
+from datetime import timedelta
+
 from minizinc import Instance, Model, Solver
 
 
 def run_model(
-    model_file=[], model_text=[], timeout=None, solver="gecode", verbose=False
+    model_file=[], model_text=[], timeout=100, solver="gecode", verbose=False
 ):
     model = Model()
     _solver = Solver.lookup(solver)
@@ -19,7 +21,7 @@ def run_model(
 
         inst.add_string(text)
     # result = await inst.solve_async(timeout=timeout)
-    result = inst.solve(timeout=timeout)
+    result = inst.solve(timeout=timedelta(seconds=timeout))
     if verbose:
         print("\n\n\n\n-----------------------------------------------------")
         print(result)
