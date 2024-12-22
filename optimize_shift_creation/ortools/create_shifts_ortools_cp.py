@@ -8,9 +8,9 @@ class CPShifts:
 
     def __init__(self, estimated_rider_demand):
         self.rider_demand = estimated_rider_demand
-        self.rider_demand_t = self.convert_rider_demand_to_array()
+        self.rider_demand_t = self._convert_rider_demand_to_array()
 
-    def convert_rider_demand_to_array(self):
+    def _convert_rider_demand_to_array(self):
         times = self.rider_demand.keys()
         return [
             self.rider_demand[t] if t in times else 0 for t in range(max(times) + 1)
@@ -205,11 +205,25 @@ class CPShifts:
             # Add constraints to link activity to start time and length
             # A-> b1 y b2
             # no A -> !b1 y !b2
+
             for s, (shift_starts_at, shift_len) in enumerate(zip(t_shifts, len_shifts)):
-                model.Add(shift_starts_at <= t).OnlyEnforceIf(active_shift_at_t[t][s])
-                model.Add(shift_starts_at > t).OnlyEnforceIf(
+
+                starts_before = model.NewBoolVar("starts_before")
+                model.Add(shift_starts_at <= t).OnlyEnforceIf(starts_before)
+                model.Add(shift_starts_at > t).OnlyEnforceIf(starts_before.Not())
+
+                ends_after = model.NewBoolVar("ends_after")
+                model.Add(t <= shift_starts_at + shift_len - 1).OnlyEnforceIf(
+                    ends_after
+                )
+                model.Add(t > shift_starts_at + shift_len - 1).OnlyEnforceIf(
+                    ends_after.Not()
+                )
+
+                model.AddBoolOr([starts_before.Not(), ends_after.Not()]).OnlyEnforceIf(
                     active_shift_at_t[t][s].Not()
                 )
+                model.Add(shift_starts_at <= t).OnlyEnforceIf(active_shift_at_t[t][s])
                 model.Add(t <= shift_starts_at + shift_len - 1).OnlyEnforceIf(
                     active_shift_at_t[t][s]
                 )
