@@ -16,7 +16,18 @@ from optimize_shift_creation.ortools.create_shifts_ortools_cp import CPShifts
         # # 9 shifts of len 3 and startime 0 -> obj = 2
         (3, 3, [10, 9, 8], 2, {(0, 3): 9}),
         (2, 3, [1, 2, 2], 0, {(0, 3): 1, (1, 2): 1}),
-        # (2, 3, [2, 2, 1], 0, {(0, 2): 1, (0, 3): 1}),  # failing test
+        (2, 2, [1] * 10, 0, {(0, 2): 1, (2, 2): 1, (4, 2): 1, (6, 2): 1, (8, 2): 1}),
+        (2, 3, [2, 2, 1], 0, {(0, 2): 1, (0, 3): 1}),  # fixed
+        (
+            2,
+            2,
+            [10] * 10,
+            0,
+            {(0, 2): 10, (2, 2): 10, (4, 2): 10, (6, 2): 10, (8, 2): 10},
+        ),
+        # (2, 2, [100] * 100, 0,
+        # {(0, 2): 100, (2, 2): 100, (4, 2): 100, (6, 2): 100, (8, 2): 100})
+        # , # -> work on symmetries and dominance and 2nd version
     ],
 )
 def test_rider_demand_satisfaction(
